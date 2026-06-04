@@ -41,7 +41,12 @@ export default async function ComparePage() {
       </div>
 
       {/* Client component — justified use of 'use client' for interactive selectors */}
-      <Suspense fallback={<div className="p-8 text-center meta-text skeleton h-64">Loading compare tool...</div>}>
+      <Suspense fallback={
+        <div className="card p-12 text-center animate-pulse">
+          <div className="text-4xl mb-3">⚖️</div>
+          <p className="meta-text">Select two salary records above to see a detailed comparison.</p>
+        </div>
+      }>
         <ComparePanel salaries={salaries} />
       </Suspense>
     </div>

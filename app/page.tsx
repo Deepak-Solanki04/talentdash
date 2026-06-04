@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 
 export default async function HomePage() {
   // Fetch top companies and recent salary data
-  const [companies, recentSalaries] = await Promise.all([
+  const [companies, recentSalaries, totalSalaries, totalCompanies] = await Promise.all([
     prisma.company.findMany({
       include: { salaries: { select: { total_compensation: true } } },
       take: 12,
@@ -30,6 +30,8 @@ export default async function HomePage() {
       orderBy: { total_compensation: 'desc' },
       take: 6,
     }),
+    prisma.salary.count(),
+    prisma.company.count(),
   ])
 
   const serializedCompanies = serializePrismaRecord(companies) as any[]
@@ -76,8 +78,8 @@ export default async function HomePage() {
           {/* Quick stats */}
           <div className="grid grid-cols-3 gap-6 max-w-lg mx-auto mt-14">
             {[
-              { value: `${serializedSalaries.length}+`, label: 'Salary Records' },
-              { value: `${serializedCompanies.length}+`, label: 'Companies' },
+              { value: `${totalSalaries}+`, label: 'Salary Records' },
+              { value: `${totalCompanies}+`, label: 'Companies' },
               { value: '8+', label: 'Cities' },
             ].map(({ value, label }) => (
               <div key={label} className="text-center">
