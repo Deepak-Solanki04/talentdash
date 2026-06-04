@@ -1,5 +1,7 @@
 # TalentDash Trial Task Submission
 
+**Live Application:** [https://talentdash-ten.vercel.app/](https://talentdash-ten.vercel.app/)
+
 This repository contains the Full Stack implementation for the TalentDash 3-Day Engineering Trial Task. The platform has been engineered specifically for the Indian tech compensation ecosystem, prioritizing structured data, scalability, and static-first performance.
 
 ## Product Architecture & Engineering Principles
