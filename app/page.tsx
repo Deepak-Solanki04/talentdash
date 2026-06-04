@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { prisma } from '@/lib/db'
 import { serializePrismaRecord, formatCurrency, computeMedian } from '@/lib/format'
+import CompaniesList from '@/components/features/CompaniesList'
 
 export const revalidate = 3600 // ISR: hourly
 
@@ -88,53 +89,16 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── Top Companies ──────────────────────────────────────────────────── */}
+      {/* ── Search Companies ──────────────────────────────────────────────────── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
         <div className="flex items-center justify-between mb-8">
-          <h2 style={{ fontSize: '24px', margin: 0 }}>Top Companies</h2>
+          <h2 style={{ fontSize: '24px', margin: 0 }}>Search Companies</h2>
           <Link href="/companies" className="text-sm font-medium" style={{ color: '#FF5A5F' }}>
-            View all →
+            View directory →
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {serializedCompanies.map((company: any) => {
-            const tcValues = company.salaries.map((s: any) => s.total_compensation)
-            const median = computeMedian(tcValues)
-            const primaryCurrency = 'INR'
-
-            return (
-              <Link
-                key={company.slug}
-                href={`/companies/${company.slug}`}
-                className="card p-4 hover:shadow-md transition-all duration-200 group"
-                style={{ textDecoration: 'none' }}
-              >
-                {/* Company initial avatar */}
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm mb-3"
-                  style={{ background: '#FF5A5F' }}
-                >
-                  {company.name.slice(0, 2).toUpperCase()}
-                </div>
-                <div
-                  className="font-semibold text-sm mb-1 truncate"
-                  style={{ color: '#222222' }}
-                  title={company.name}
-                >
-                  {company.name}
-                </div>
-                <div className="meta-text mb-2">{company.industry ?? 'Technology'}</div>
-                {median > 0 && (
-                  <div className="text-sm font-bold" style={{ color: '#0369A1' }}>
-                    {formatCurrency(median, primaryCurrency)} median
-                  </div>
-                )}
-                <div className="meta-text">{tcValues.length} records</div>
-              </Link>
-            )
-          })}
-        </div>
+        <CompaniesList companies={serializedCompanies} />
       </section>
 
       {/* ── Top Salaries ───────────────────────────────────────────────────── */}

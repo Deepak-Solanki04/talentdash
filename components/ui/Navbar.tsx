@@ -21,20 +21,10 @@ export default function Navbar() {
 
         {/* Nav links */}
         <div className="hidden md:flex items-center gap-6">
-          {[
-            { href: '/salaries', label: 'Salaries' },
-            { href: '/companies', label: 'Companies' },
-            { href: '/compare', label: 'Compare' },
-          ].map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className="text-sm font-medium transition-colors duration-150 hover:text-[#FF5A5F]"
-              style={{ color: '#484848' }}
-            >
-              {label}
-            </Link>
-          ))}
+          <Link href="/companies" className="text-sm font-medium hover:opacity-70 transition-opacity" style={{ color: '#484848' }}>Companies</Link>
+          <Link href="/salaries" className="text-sm font-medium hover:opacity-70 transition-opacity" style={{ color: '#484848' }}>Salaries</Link>
+          <Link href="/compare" className="text-sm font-medium hover:opacity-70 transition-opacity" style={{ color: '#484848' }}>Compare</Link>
+          <Link href="/tools" className="text-sm font-medium hover:opacity-70 transition-opacity" style={{ color: '#484848' }}>Tools</Link>
         </div>
 
         {/* CTA */}

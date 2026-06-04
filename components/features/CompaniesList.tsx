@@ -44,11 +44,19 @@ export default function CompaniesList({ companies }: { companies: any[] }) {
                 style={{ textDecoration: 'none' }}
               >
                 <div className="flex items-start gap-4">
-                  <div
-                    className="w-11 h-11 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-                    style={{ background: '#FF5A5F' }}
-                  >
-                    {company.name.slice(0, 2).toUpperCase()}
+                  {/* Logo with fallback */}
+                  <div className="relative w-11 h-11 flex-shrink-0">
+                    <div
+                      className="absolute inset-0 rounded-xl flex items-center justify-center text-white font-bold text-sm bg-[#FF5A5F]"
+                    >
+                      {company.name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <img 
+                      src={`https://logo.clearbit.com/${company.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`} 
+                      alt={company.name}
+                      className="absolute inset-0 w-11 h-11 rounded-xl object-cover bg-white border border-[#EBEBEB]"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
                   </div>
 
                   <div className="flex-1 min-w-0">
