@@ -1,26 +1,277 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --color-primary: #FF5A5F;
+    --color-deep-text: #222222;
+    --color-body-text: #484848;
+    --color-muted-text: #717171;
+    --color-surface: #FFFFFF;
+    --color-app-bg: #F7F7F7;
+    --color-border: #EBEBEB;
+    --color-success: #008A05;
+    --color-warning: #FFB400;
+    --color-error: #D93025;
+    --color-hover: #F2F2F2;
+    --color-data-blue: #0369A1;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: var(--font-inter), system-ui, sans-serif;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    color: var(--color-deep-text);
+    background: var(--color-app-bg);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Utility classes — used directly in className props                          */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+/* Primary button */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #ffffff;
+  background-color: #FF5A5F;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+.btn-primary:hover {
+  background-color: #e84e53;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 90, 95, 0.3);
+}
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* Ghost button */
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #484848;
+  background: #ffffff;
+  border: 1px solid #EBEBEB;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.btn-ghost:hover {
+  background: #F2F2F2;
+  border-color: #d0d0d0;
+}
+
+/* Card */
+.card {
+  border-radius: 12px;
+  border: 1px solid #EBEBEB;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* Table */
+.td-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.td-table thead {
+  border-bottom: 1px solid #EBEBEB;
+}
+.td-table thead th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #717171;
+  white-space: nowrap;
+}
+.td-table tbody tr {
+  border-bottom: 1px solid #EBEBEB;
+  transition: background-color 0.1s;
+  cursor: default;
+}
+.td-table tbody tr:last-child {
+  border-bottom: none;
+}
+.td-table tbody tr:hover {
+  background-color: #F2F2F2;
+}
+.td-table tbody td {
+  padding: 14px 16px;
+  font-size: 14px;
+  color: #484848;
+  vertical-align: middle;
+}
+
+/* Total comp — dominant style */
+.tc-amount {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0369A1;
+  white-space: nowrap;
+}
+
+/* Input */
+.td-input {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  border-radius: 8px;
+  border: 1px solid #EBEBEB;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  color: #222222;
+  background: #ffffff;
+  font-family: inherit;
+}
+.td-input::placeholder {
+  color: #717171;
+}
+.td-input:focus {
+  border-color: #FF5A5F;
+  box-shadow: 0 0 0 3px rgba(255, 90, 95, 0.12);
+}
+
+/* Select */
+.td-select {
+  width: 100%;
+  padding: 10px 32px 10px 14px;
+  font-size: 14px;
+  border-radius: 8px;
+  border: 1px solid #EBEBEB;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  color: #222222;
+  background: #ffffff;
+  font-family: inherit;
+  appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23717171' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.td-select:focus {
+  border-color: #FF5A5F;
+  box-shadow: 0 0 0 3px rgba(255, 90, 95, 0.12);
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+/* Metadata text */
+.meta-text {
+  font-size: 12px;
+  font-weight: 400;
+  color: #717171;
+}
+
+/* Label */
+.label-sm {
+  font-size: 13px;
+  font-weight: 500;
+  color: #484848;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Animations                                                                  */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadein {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Typography                                                                  */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+h1 {
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #222222;
+}
+
+h2 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #222222;
+}
+
+h3 {
+  font-size: 22px;
+  font-weight: 600;
+  color: #222222;
+}
+
+p {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #484848;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Scrollbar                                                                   */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F7F7F7;
+}
+::-webkit-scrollbar-thumb {
+  background: #d0d0d0;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b0b0b0;
 }

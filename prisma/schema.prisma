@@ -1,0 +1,83 @@
+// This is the TalentDash Prisma schema
+// Data contract: every field matches the integration contract exactly
+// total_compensation is ALWAYS computed server-side: base + bonus + stock
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Level {
+  L3
+  L4
+  L5
+  L6
+  SDE_I
+  SDE_II
+  SDE_III
+  STAFF
+  PRINCIPAL
+  IC4
+  IC5
+}
+
+enum Currency {
+  INR
+  USD
+  GBP
+  EUR
+}
+
+enum Source {
+  CONTRIBUTOR
+  SCRAPED
+  AI_INFERRED
+}
+
+model Company {
+  id              String   @id @default(uuid())
+  name            String   // display name e.g. "Google India"
+  slug            String   @unique // URL-safe e.g. "google"
+  normalized_name String   // lowercase indexed e.g. "google"
+  industry        String?
+  headquarters    String?
+  founded_year    Int?
+  headcount_range String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  salaries        Salary[]
+
+  @@index([normalized_name])
+}
+
+model Salary {
+  id                 String   @id @default(uuid())
+  company_id         String
+  company            Company  @relation(fields: [company_id], references: [id])
+  role               String
+  level              Level
+  location           String
+  currency           Currency
+  experience_years   Int
+  base_salary        BigInt
+  bonus              BigInt   @default(0)
+  stock              BigInt   @default(0)
+  // COMPUTED: always = base_salary + bonus + stock. Never trust client-submitted value.
+  total_compensation BigInt
+  source             Source
+  confidence_score   Decimal  @db.Decimal(4, 2)
+  is_verified        Boolean  @default(false)
+  submitted_at       DateTime @default(now())
+
+  // Primary filter index: company + level + location
+  @@index([company_id, level, location])
+  // Sort index: total compensation
+  @@index([total_compensation])
+  // Recency sort index
+  @@index([submitted_at])
+  // Geo-level filter index
+  @@index([location, level])
+}
