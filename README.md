@@ -33,7 +33,7 @@ Following the strict trial task guidelines, TalentDash relies exclusively on mod
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/talentdash.git
+   git clone https://github.com/Deepak-Solanki04/talentdash.git
    cd talentdash
    ```
 
