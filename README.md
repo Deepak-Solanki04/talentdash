@@ -40,7 +40,6 @@ As per the strict requirement against using off-the-shelf component libraries (e
 
 3. Configure Environment Variables:
    Create a `.env` file in the root directory and add your PostgreSQL connection string. 
-   *(Tip: You can get a free serverless Postgres database instantly at [neon.tech](https://neon.tech))*
    ```text
    DATABASE_URL="postgresql://[user]:[password]@[host]/[dbname]?sslmode=require"
    ```
