@@ -3,26 +3,22 @@ import { Suspense } from 'react'
 import { prisma } from '@/lib/db'
 import { serializePrismaRecord, formatCurrency, computeMedian } from '@/lib/format'
 import SalaryTable from '@/components/features/SalaryTable'
-import type { SalaryWithCompany, Currency } from '@/types/salary'
+import type { SalaryWithCompany } from '@/types/salary'
 
-export const revalidate = 3600 // ISR: revalidate every hour
+export const revalidate = 3600
 
 export const metadata: Metadata = {
   title: 'Salary Data — India Tech Salaries by Company & Level | TalentDash',
   description:
     'Browse structured salary data for Software Engineers, Product Managers, and Data Scientists at Google, Amazon, Meta, Flipkart, TCS, and more. Filter by level (L3–L6, SDE-I to III), location, and company.',
-  alternates: {
-    canonical: 'https://talentdash.in/salaries',
-  },
+  alternates: { canonical: 'https://talentdash.in/salaries' },
   openGraph: {
     title: 'Salary Data — India Tech Salaries | TalentDash',
-    description:
-      'Structured, level-aware salary data for Indian tech professionals. Filter by company, role, level, and location.',
+    description: 'Structured, level-aware salary data for Indian tech professionals. Filter by company, role, level, and location.',
     url: 'https://talentdash.in/salaries',
   },
 }
 
-// JSON-LD structured data for Google rich results
 function SalaryJsonLd({ count }: { count: number }) {
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -30,785 +26,440 @@ function SalaryJsonLd({ count }: { count: number }) {
     name: 'TalentDash India Tech Salary Data',
     description: `Structured compensation data for ${count}+ salary records across Indian tech companies. Includes base salary, bonus, stock (RSU/ESOP), and total compensation by level and location.`,
     url: 'https://talentdash.in/salaries',
-    creator: {
-      '@type': 'Organization',
-      name: 'TalentDash',
-      url: 'https://talentdash.in',
-    },
-    keywords: [
-      'India tech salaries',
-      'software engineer salary India',
-      'Google salary India',
-      'Amazon salary India',
-      'SDE salary Bengaluru',
-      'L4 L5 salary India',
-    ],
-    variableMeasured: [
-      'Base Salary',
-      'Bonus',
-      'Stock / RSU / ESOP',
-      'Total Compensation',
-    ],
+    creator: { '@type': 'Organization', name: 'TalentDash', url: 'https://talentdash.in' },
+    keywords: ['India tech salaries', 'software engineer salary India', 'Google salary India', 'Amazon salary India', 'SDE salary Bengaluru', 'L4 L5 salary India'],
+    variableMeasured: ['Base Salary', 'Bonus', 'Stock / RSU / ESOP', 'Total Compensation'],
   }
-
-  return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-    />
-  )
+  return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 }
 
-// ── Server-side stat helpers ─────────────────────────────────────────────────
-
-function getTopLocation(salaries: SalaryWithCompany[]): string {
-  const counts: Record<string, number> = {}
-  for (const s of salaries) {
-    counts[s.location] = (counts[s.location] ?? 0) + 1
-  }
-  return (
-    Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'India'
-  )
+const LOGO_DOMAINS: Record<string, string> = {
+  google: 'google.com', amazon: 'amazon.com', microsoft: 'microsoft.com',
+  meta: 'meta.com', nvidia: 'nvidia.com', flipkart: 'flipkart.com',
+  razorpay: 'razorpay.com', tcs: 'tcs.com', infosys: 'infosys.com',
+  wipro: 'wipro.com', meesho: 'meesho.com', zepto: 'zeptonow.com',
 }
 
-interface RoleGroup {
-  role: string
-  count: number
-  medianTC: number
-  minTC: number
-  maxTC: number
-  tcs: number[]
-  experienceGroups: ExperienceGroup[]
-  avgBase: number
-  avgBonus: number
-  avgStock: number
+function getLogoUrl(slug: string) {
+  return `https://logo.clearbit.com/${LOGO_DOMAINS[slug] ?? slug + '.com'}`
 }
 
-interface ExperienceGroup {
-  label: string
-  minYears: number
-  maxYears: number
-  medianTC: number
-  count: number
-}
-
-const EXP_BUCKETS = [
-  { label: '0–2 yrs', minYears: 0, maxYears: 2 },
-  { label: '3–5 yrs', minYears: 3, maxYears: 5 },
-  { label: '6–9 yrs', minYears: 6, maxYears: 9 },
-  { label: '10+ yrs', minYears: 10, maxYears: 99 },
-]
-
-function buildRoleGroups(salaries: SalaryWithCompany[]): RoleGroup[] {
-  const map: Record<string, SalaryWithCompany[]> = {}
-  for (const s of salaries) {
-    if (!map[s.role]) map[s.role] = []
-    map[s.role].push(s)
-  }
-
-  return Object.entries(map)
-    .map(([role, records]) => {
-      const tcs = records.map((r) => r.total_compensation)
-      const bases = records.map((r) => r.base_salary)
-      const bonuses = records.map((r) => r.bonus)
-      const stocks = records.map((r) => r.stock)
-
-      const experienceGroups: ExperienceGroup[] = EXP_BUCKETS.map((bucket) => {
-        const subset = records.filter(
-          (r) =>
-            r.experience_years >= bucket.minYears &&
-            r.experience_years <= bucket.maxYears
-        )
-        return {
-          label: bucket.label,
-          minYears: bucket.minYears,
-          maxYears: bucket.maxYears,
-          medianTC: computeMedian(subset.map((r) => r.total_compensation)),
-          count: subset.length,
-        }
-      }).filter((g) => g.count > 0)
-
-      const n = records.length
-      return {
-        role,
-        count: n,
-        medianTC: computeMedian(tcs),
-        minTC: Math.min(...tcs),
-        maxTC: Math.max(...tcs),
-        tcs,
-        experienceGroups,
-        avgBase: bases.reduce((a, b) => a + b, 0) / n,
-        avgBonus: bonuses.reduce((a, b) => a + b, 0) / n,
-        avgStock: stocks.reduce((a, b) => a + b, 0) / n,
-      }
-    })
-    .sort((a, b) => b.count - a.count)
-}
-
-// ── Sub-components (server) ─────────────────────────────────────────────────
-
-function VerifiedBadge() {
-  return (
-    <span
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-      style={{ background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0' }}
-    >
-      <svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden>
-        <circle cx="6" cy="6" r="6" fill="#059669" />
-        <path d="M3.5 6.2l1.8 1.8 3.2-3.5" stroke="#fff" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-      Verified
-    </span>
-  )
-}
-
-function StatCard({
-  icon,
-  label,
-  value,
-  sub,
-}: {
-  icon: string
-  label: string
-  value: string
-  sub?: string
-}) {
-  return (
-    <div
-      className="flex-1 min-w-0 rounded-xl p-4"
-      style={{ border: '1px solid #E5E7EB', background: '#fff' }}
-    >
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-lg">{icon}</span>
-        <span className="text-xs font-medium" style={{ color: '#717171' }}>
-          {label}
-        </span>
-      </div>
-      <div className="text-xl font-bold" style={{ color: '#222222' }}>
-        {value}
-      </div>
-      {sub && (
-        <div className="text-xs mt-0.5" style={{ color: '#717171' }}>
-          {sub}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function RangeBar({
-  value,
-  min,
-  max,
-  label,
-}: {
-  value: number
-  min: number
-  max: number
-  label: string
-}) {
-  const pct = max === min ? 50 : Math.round(((value - min) / (max - min)) * 100)
-  return (
-    <div className="mt-4">
-      <div className="flex justify-between text-xs mb-1" style={{ color: '#717171' }}>
-        <span>{formatCurrency(min, 'INR')}</span>
-        <span className="font-semibold" style={{ color: '#222222' }}>
-          {label}
-        </span>
-        <span>{formatCurrency(max, 'INR')}</span>
-      </div>
-      <div
-        className="relative h-2 rounded-full overflow-hidden"
-        style={{ background: '#F3F4F6' }}
-      >
-        <div
-          className="absolute inset-y-0 left-0 rounded-full"
-          style={{
-            width: '100%',
-            background: 'linear-gradient(90deg, #FF5A5F 0%, #FF8A8E 100%)',
-          }}
-        />
-        <div
-          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-white shadow"
-          style={{
-            left: `calc(${pct}% - 6px)`,
-            background: '#FF5A5F',
-          }}
-        />
-      </div>
-    </div>
-  )
-}
-
-function ExperienceBarChart({ groups }: { groups: ExperienceGroup[] }) {
-  if (groups.length === 0) return null
-  const maxTC = Math.max(...groups.map((g) => g.medianTC))
-  return (
-    <div className="mt-6">
-      <h3 className="text-sm font-semibold mb-3" style={{ color: '#222222' }}>
-        Total Pay by Experience
-      </h3>
-      <div className="space-y-3">
-        {groups.map((g) => {
-          const pct = maxTC === 0 ? 0 : Math.round((g.medianTC / maxTC) * 100)
-          return (
-            <div key={g.label}>
-              <div className="flex justify-between text-xs mb-1" style={{ color: '#717171' }}>
-                <span>{g.label}</span>
-                <span className="font-semibold" style={{ color: '#222222' }}>
-                  {formatCurrency(g.medianTC, 'INR')}
-                </span>
-              </div>
-              <div
-                className="h-2 rounded-full overflow-hidden"
-                style={{ background: '#F3F4F6' }}
-              >
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${pct}%`,
-                    background: 'linear-gradient(90deg, #FF5A5F 0%, #FF8A8E 100%)',
-                    transition: 'width 0.4s ease',
-                  }}
-                />
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-function CompBreakdown({
-  avgBase,
-  avgBonus,
-  avgStock,
-  avgTC,
-}: {
-  avgBase: number
-  avgBonus: number
-  avgStock: number
-  avgTC: number
-}) {
-  const safe = avgTC || 1
-  const items = [
-    { label: 'Base Pay', value: avgBase, color: '#FF5A5F' },
-    { label: 'Bonus', value: avgBonus, color: '#FF8A8E' },
-    { label: 'Equity', value: avgStock, color: '#FECACA' },
-    {
-      label: 'Benefits',
-      value: Math.max(0, avgTC - avgBase - avgBonus - avgStock),
-      color: '#FEE2E2',
-    },
-  ]
-
-  return (
-    <div className="mt-6">
-      <h3 className="text-sm font-semibold mb-3" style={{ color: '#222222' }}>
-        Compensation Breakdown
-      </h3>
-      {/* Stacked bar */}
-      <div className="flex h-3 rounded-full overflow-hidden mb-4">
-        {items.map((item) => {
-          const pct = Math.round((item.value / safe) * 100)
-          return pct > 0 ? (
-            <div
-              key={item.label}
-              style={{ width: `${pct}%`, background: item.color }}
-            />
-          ) : null
-        })}
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        {items.map((item) => {
-          const pct = Math.round((item.value / safe) * 100)
-          return (
-            <div key={item.label} className="flex items-center gap-2">
-              <span
-                className="inline-block w-2.5 h-2.5 rounded-sm flex-shrink-0"
-                style={{ background: item.color }}
-              />
-              <span className="text-xs" style={{ color: '#717171' }}>
-                {item.label}
-              </span>
-              <span className="text-xs font-semibold ml-auto" style={{ color: '#222222' }}>
-                {pct}%
-              </span>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-function RoleDetailPanel({ group }: { group: RoleGroup }) {
-  const avgTC = group.avgBase + group.avgBonus + group.avgStock
-
-  return (
-    <div>
-      {/* Role header */}
-      <div className="flex items-center gap-2 mb-1 flex-wrap">
-        <h2 className="text-xl font-bold" style={{ color: '#222222' }}>
-          {group.role}
-        </h2>
-        <VerifiedBadge />
-      </div>
-      <p className="text-xs mb-4" style={{ color: '#717171' }}>
-        Based on {group.count} verified submissions
-      </p>
-
-      {/* Total pay highlight */}
-      <div
-        className="rounded-xl p-4 mb-4"
-        style={{ background: '#FFF5F5', border: '1px solid #FECACA' }}
-      >
-        <div className="text-xs font-medium mb-1" style={{ color: '#717171' }}>
-          Total Pay (Annual) · Median
-        </div>
-        <div className="text-3xl font-bold" style={{ color: '#FF5A5F' }}>
-          {formatCurrency(group.medianTC, 'INR')}
-        </div>
-        <RangeBar value={group.medianTC} min={group.minTC} max={group.maxTC} label="Median" />
-      </div>
-
-      {/* Experience chart */}
-      <ExperienceBarChart groups={group.experienceGroups} />
-
-      {/* Compensation breakdown */}
-      <CompBreakdown
-        avgBase={group.avgBase}
-        avgBonus={group.avgBonus}
-        avgStock={group.avgStock}
-        avgTC={avgTC}
-      />
-
-      {/* CTA banner */}
-      <div
-        className="mt-6 rounded-xl p-4 flex items-center justify-between gap-4"
-        style={{ background: '#FFF1F2', border: '1px solid #FECACA' }}
-      >
-        <p className="text-sm font-medium" style={{ color: '#222222' }}>
-          High performer? See how your compensation compares.
-        </p>
-        <a
-          href="/salaries/submit"
-          className="flex-shrink-0 text-sm font-semibold whitespace-nowrap"
-          style={{ color: '#FF5A5F' }}
-        >
-          Compare your salary →
-        </a>
-      </div>
-    </div>
-  )
-}
-
-// ── Main Page ────────────────────────────────────────────────────────────────
+const TABS = ['Salaries', 'Insights', 'Benefits', 'Photos', 'Reviews', 'Jobs']
 
 export default async function SalariesPage() {
-  // RSC: fetch all salary data at build time
   const rawSalaries = await prisma.salary.findMany({
     include: { company: true },
     orderBy: { total_compensation: 'desc' },
   })
-
-  // Serialize BigInt for client component
   const salaries = serializePrismaRecord(rawSalaries) as unknown as SalaryWithCompany[]
 
-  // ── Compute server-side stats ──────────────────────────────────────────────
   const count = salaries.length
-  const allTCs = salaries.map((s) => s.total_compensation)
-  const avgTC = allTCs.length > 0 ? allTCs.reduce((a, b) => a + b, 0) / allTCs.length : 0
-  const minTC = allTCs.length > 0 ? Math.min(...allTCs) : 0
-  const maxTC = allTCs.length > 0 ? Math.max(...allTCs) : 0
-  const topLocation = getTopLocation(salaries)
-  const roleGroups = buildRoleGroups(salaries)
+  const tcVals = salaries.map((s) => s.total_compensation)
+  const avgTC = tcVals.length > 0 ? Math.round(tcVals.reduce((a, b) => a + b, 0) / tcVals.length) : 0
+  const minTC = tcVals.length > 0 ? Math.min(...tcVals) : 0
+  const maxTC = tcVals.length > 0 ? Math.max(...tcVals) : 0
+  const primaryCurrency = (salaries[0]?.currency ?? 'INR') as any
+
+  // Top paying location
+  const locCounts: Record<string, number> = {}
+  for (const s of salaries) locCounts[s.location] = (locCounts[s.location] ?? 0) + 1
+  const topLocation = Object.entries(locCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'Bengaluru'
+
+  // Role groups (sorted by count)
+  const roleMap: Record<string, { slugs: string[]; tcs: number[]; bases: number[]; bonuses: number[]; stocks: number[]; expData: number[] }> = {}
+  for (const s of salaries) {
+    if (!roleMap[s.role]) roleMap[s.role] = { slugs: [], tcs: [], bases: [], bonuses: [], stocks: [], expData: [] }
+    roleMap[s.role].slugs.push(s.company.slug)
+    roleMap[s.role].tcs.push(s.total_compensation)
+    roleMap[s.role].bases.push(s.base_salary)
+    roleMap[s.role].bonuses.push(s.bonus)
+    roleMap[s.role].stocks.push(s.stock)
+    roleMap[s.role].expData.push(s.experience_years)
+  }
+  const roleGroups = Object.entries(roleMap)
+    .map(([role, data]) => ({
+      role,
+      count: data.tcs.length,
+      medianTC: computeMedian(data.tcs),
+      minTC: Math.min(...data.tcs),
+      maxTC: Math.max(...data.tcs),
+      avgBase: data.bases.length > 0 ? Math.round(data.bases.reduce((a, b) => a + b, 0) / data.bases.length) : 0,
+      avgBonus: data.bonuses.length > 0 ? Math.round(data.bonuses.reduce((a, b) => a + b, 0) / data.bonuses.length) : 0,
+      avgStock: data.stocks.length > 0 ? Math.round(data.stocks.reduce((a, b) => a + b, 0) / data.stocks.length) : 0,
+    }))
+    .sort((a, b) => b.count - a.count)
+
   const firstRole = roleGroups[0]
-  // "People also viewed" — next 4 roles after the first
-  const alsoViewed = roleGroups.slice(1, 5)
+
+  // Unique companies
+  const uniqueCompanies = [...new Set(salaries.map((s) => s.company.slug))].slice(0, 8)
+  const uniqueLocations = [...new Set(salaries.map((s) => s.location))].slice(0, 6)
 
   return (
     <>
       <SalaryJsonLd count={count} />
 
-      {/* ── Hero Section ─────────────────────────────────────────────────── */}
-      <section
-        className="relative overflow-hidden"
-        style={{ background: '#fff', borderBottom: '1px solid #E5E7EB' }}
-      >
-        {/* Decorative blobs */}
-        <div
-          className="absolute -top-20 -right-20 w-96 h-96 rounded-full pointer-events-none"
-          style={{
-            background: 'radial-gradient(circle, rgba(255,90,95,0.08) 0%, transparent 70%)',
-          }}
-          aria-hidden
-        />
-        <div
-          className="absolute bottom-0 left-1/3 w-64 h-64 rounded-full pointer-events-none"
-          style={{
-            background: 'radial-gradient(circle, rgba(255,90,95,0.06) 0%, transparent 70%)',
-          }}
-          aria-hidden
-        />
+      <div style={{ background: '#fff', minHeight: '100vh' }}>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 relative">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-8">
-            {/* Left: headline + stats */}
-            <div className="flex-1">
-              {/* Breadcrumb */}
-              <nav className="flex items-center gap-1.5 text-xs mb-4" style={{ color: '#717171' }}>
-                <a href="/companies" className="hover:underline" style={{ color: '#717171' }}>
-                  Companies
-                </a>
-                <span>›</span>
-                <span style={{ color: '#222222' }}>Salaries</span>
-              </nav>
+        {/* ── Hero ──────────────────────────────────────────────────────────── */}
+        <section style={{ position: 'relative', overflow: 'hidden', background: '#fff' }}>
+          {/* Pink blob decorations */}
+          <div style={{ position: 'absolute', top: '-80px', left: '-80px', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,90,95,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '320px', height: '320px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(219,234,254,0.5) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-              {/* Headline */}
-              <div className="flex items-center gap-3 flex-wrap mb-2">
-                <h1 className="text-3xl sm:text-4xl font-bold" style={{ color: '#222222' }}>
-                  India Tech Salaries
-                </h1>
-                <VerifiedBadge />
-              </div>
-              <p className="text-sm mb-6" style={{ color: '#717171' }}>
-                Based on{' '}
-                <span className="font-semibold" style={{ color: '#222222' }}>
-                  {count.toLocaleString()}
-                </span>{' '}
-                verified salary submissions in India · Updated June 2026
-              </p>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+            {/* Breadcrumb */}
+            <nav style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#9CA3AF', marginBottom: '20px' }}>
+              <a href="/companies" style={{ color: '#9CA3AF', textDecoration: 'none' }}>Companies</a>
+              <span>›</span>
+              <span style={{ color: '#222222', fontWeight: 500 }}>Salaries</span>
+            </nav>
 
-              {/* Stat cards */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                <StatCard
-                  icon="💰"
-                  label="Average Total Pay"
-                  value={formatCurrency(avgTC, 'INR' as Currency)}
-                  sub="Annual, all levels"
-                />
-                <StatCard
-                  icon="📊"
-                  label="Salary Range"
-                  value={`${formatCurrency(minTC, 'INR' as Currency)} – ${formatCurrency(maxTC, 'INR' as Currency)}`}
-                  sub="Min – Max across dataset"
-                />
-                <StatCard
-                  icon="📍"
-                  label="Top Paying Location"
-                  value={topLocation}
-                  sub="Most submissions"
-                />
-              </div>
-            </div>
-
-            {/* Right: decorative pink gradient blob */}
-            <div
-              className="hidden lg:flex flex-shrink-0 w-72 h-48 rounded-2xl items-center justify-center"
-              style={{
-                background:
-                  'linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 50%, #FECACA 100%)',
-                border: '1px solid #FECACA',
-              }}
-            >
-              <div className="text-center">
-                <div className="text-5xl mb-2">💼</div>
-                <p className="text-xs font-medium" style={{ color: '#FF5A5F' }}>
-                  {count.toLocaleString()} Verified Records
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Search + Filter Bar ──────────────────────────────────────────────── */}
-      <div style={{ background: '#fff', borderBottom: '1px solid #E5E7EB' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-            {/* Search */}
-            <div className="relative flex-1">
-              <span
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-base pointer-events-none"
-                aria-hidden
-              >
-                🔍
-              </span>
-              <input
-                type="search"
-                placeholder="Search roles, job titles or keywords"
-                className="w-full rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none"
-                style={{
-                  border: '1px solid #E5E7EB',
-                  color: '#222222',
-                  background: '#FAFAFA',
-                }}
-                aria-label="Search roles"
-              />
-            </div>
-
-            {/* Location dropdown */}
-            <select
-              className="rounded-xl px-3 py-2.5 text-sm outline-none"
-              style={{
-                border: '1px solid #E5E7EB',
-                color: '#222222',
-                background: '#fff',
-                minWidth: '140px',
-              }}
-              defaultValue="India"
-              aria-label="Location"
-            >
-              <option value="India">📍 India</option>
-              <option value="Bengaluru">Bengaluru</option>
-              <option value="Hyderabad">Hyderabad</option>
-              <option value="Mumbai">Mumbai</option>
-              <option value="Delhi NCR">Delhi NCR</option>
-              <option value="Pune">Pune</option>
-            </select>
-
-            {/* Experience dropdown */}
-            <select
-              className="rounded-xl px-3 py-2.5 text-sm outline-none"
-              style={{
-                border: '1px solid #E5E7EB',
-                color: '#222222',
-                background: '#fff',
-                minWidth: '160px',
-              }}
-              defaultValue=""
-              aria-label="Experience"
-            >
-              <option value="">All Experience</option>
-              <option value="0-2">0–2 years</option>
-              <option value="3-5">3–5 years</option>
-              <option value="6-9">6–9 years</option>
-              <option value="10+">10+ years</option>
-            </select>
-
-            {/* More filters */}
-            <button
-              type="button"
-              className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-medium"
-              style={{
-                border: '1px solid #E5E7EB',
-                color: '#222222',
-                background: '#fff',
-              }}
-            >
-              <span>⚙️</span>
-              More filters
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Tabs Row ─────────────────────────────────────────────────────────── */}
-      <div style={{ background: '#fff', borderBottom: '1px solid #E5E7EB' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <nav className="flex items-center gap-0 overflow-x-auto" role="tablist">
-            {[
-              { label: 'Salaries', active: true },
-              { label: 'Insights', badge: 'New' },
-              { label: 'Benefits' },
-              { label: 'Photos' },
-              { label: 'Reviews' },
-              { label: 'Jobs' },
-            ].map((tab) => (
-              <button
-                key={tab.label}
-                role="tab"
-                aria-selected={tab.active ?? false}
-                className="flex items-center gap-1.5 px-4 py-3.5 text-sm font-medium whitespace-nowrap transition-colors relative flex-shrink-0"
-                style={{
-                  color: tab.active ? '#FF5A5F' : '#717171',
-                  borderBottom: tab.active ? '2px solid #FF5A5F' : '2px solid transparent',
-                  marginBottom: '-1px',
-                  background: 'none',
-                  cursor: tab.active ? 'default' : 'pointer',
-                }}
-              >
-                {tab.label}
-                {tab.badge && (
-                  <span
-                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                    style={{ background: '#FF5A5F', color: '#fff' }}
-                  >
-                    {tab.badge}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '32px', alignItems: 'flex-start' }}>
+              <div>
+                {/* Title row */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                  <h1 style={{ fontSize: 'clamp(28px,4vw,40px)', fontWeight: 700, color: '#111827', margin: 0, lineHeight: '1.2' }}>
+                    India Tech Salaries
+                  </h1>
+                  <span style={{ background: '#DCFCE7', color: '#16A34A', border: '1px solid #BBF7D0', borderRadius: '999px', fontSize: '12px', fontWeight: 600, padding: '3px 12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    ✓ Verified
                   </span>
-                )}
-              </button>
-            ))}
-          </nav>
-        </div>
-      </div>
+                </div>
+                <p style={{ fontSize: '14px', color: '#6B7280', margin: '0 0 24px' }}>
+                  Based on {count} verified salary submissions in India · Updated June 2026
+                </p>
 
-      {/* ── Two-Column Layout ─────────────────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="flex gap-6 items-start">
+                {/* 3 stat cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px', maxWidth: '640px' }}>
+                  {[
+                    {
+                      icon: '💰',
+                      label: 'Average Total Pay',
+                      value: formatCurrency(avgTC, primaryCurrency),
+                      sub: '/ year',
+                      bg: '#FFF5F5',
+                    },
+                    {
+                      icon: '📊',
+                      label: 'Salary Range (Annual)',
+                      value: `${formatCurrency(minTC, primaryCurrency)} – ${formatCurrency(maxTC, primaryCurrency)}`,
+                      sub: 'Min — Max',
+                      bg: '#F0F9FF',
+                    },
+                    {
+                      icon: '📍',
+                      label: 'Top Paying Location',
+                      value: topLocation,
+                      sub: 'Most submitted city',
+                      bg: '#F0FDF4',
+                    },
+                  ].map(({ icon, label, value, sub, bg }) => (
+                    <div key={label} style={{ padding: '16px', background: bg, border: '1px solid #F3F4F6', borderRadius: '12px' }}>
+                      <div style={{ fontSize: '20px', marginBottom: '8px' }}>{icon}</div>
+                      <div style={{ fontSize: '11px', color: '#9CA3AF', marginBottom: '4px' }}>{label}</div>
+                      <div style={{ fontSize: '15px', fontWeight: 700, color: '#111827', lineHeight: '1.2', wordBreak: 'break-word' }}>{value}</div>
+                      <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '2px' }}>{sub}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-          {/* ── Left Sidebar: Role List ─────────────────────────────────────── */}
-          <aside
-            className="hidden lg:block flex-shrink-0 rounded-xl overflow-hidden"
-            style={{
-              width: '288px',
-              border: '1px solid #E5E7EB',
-              background: '#fff',
-            }}
-          >
-            <div
-              className="px-4 py-3"
-              style={{ borderBottom: '1px solid #E5E7EB', background: '#FAFAFA' }}
-            >
-              <h2 className="text-sm font-semibold" style={{ color: '#222222' }}>
-                All Roles
-              </h2>
-              <p className="text-xs mt-0.5" style={{ color: '#717171' }}>
-                {roleGroups.length} roles · sorted by submissions
-              </p>
+              {/* Right decorative company logos */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 48px)', gap: '8px', opacity: 0.85 }}>
+                {uniqueCompanies.slice(0, 8).map((slug) => (
+                  <div key={slug} style={{ position: 'relative', width: '48px', height: '48px' }}>
+                    <div style={{ position: 'absolute', inset: 0, background: '#FF5A5F', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '12px' }}>
+                      {slug.slice(0, 2).toUpperCase()}
+                    </div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={getLogoUrl(slug)}
+                      alt={slug}
+                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', padding: '6px', background: '#fff', borderRadius: '10px', border: '1px solid #E5E7EB', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-            <ul className="divide-y" style={{ borderColor: '#E5E7EB' }}>
-              {roleGroups.map((rg, idx) => (
-                <li
-                  key={rg.role}
-                  className="px-4 py-3 cursor-pointer transition-colors"
+          </div>
+        </section>
+
+        {/* ── Search + Filters ──────────────────────────────────────────────── */}
+        <div style={{ borderTop: '1px solid #F3F4F6', borderBottom: '1px solid #F3F4F6', background: '#FAFAFA', padding: '14px 0' }}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, position: 'relative', minWidth: '260px' }}>
+                <div style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }}>
+                  <svg width="16" height="16" fill="none" stroke="#9CA3AF" strokeWidth="2" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search roles, job titles or keywords"
+                  style={{ width: '100%', padding: '10px 14px 10px 42px', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '14px', color: '#222222', background: '#fff', outline: 'none', fontFamily: 'inherit' }}
+                />
+                <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)' }}>
+                  <svg width="16" height="16" fill="none" stroke="#FF5A5F" strokeWidth="2" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+                  </svg>
+                </div>
+              </div>
+
+              <select style={{ padding: '10px 36px 10px 14px', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '13px', color: '#484848', background: '#fff', appearance: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <option>📍 India</option>
+                {uniqueLocations.map((loc) => <option key={loc}>{loc}</option>)}
+              </select>
+
+              <select style={{ padding: '10px 36px 10px 14px', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '13px', color: '#484848', background: '#fff', appearance: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <option>All Experience</option>
+                <option>0–2 years</option>
+                <option>2–5 years</option>
+                <option>5–8 years</option>
+                <option>8+ years</option>
+              </select>
+
+              <button style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', border: '1px solid #E5E7EB', borderRadius: '8px', fontSize: '13px', color: '#484848', background: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="18" x2="20" y2="18" />
+                </svg>
+                More filters
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Tabs ──────────────────────────────────────────────────────────── */}
+        <div style={{ borderBottom: '1px solid #E5E7EB', background: '#fff' }}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+            <div style={{ display: 'flex', gap: '0', overflowX: 'auto' }}>
+              {TABS.map((tab, i) => (
+                <button
+                  key={tab}
                   style={{
-                    borderLeft: idx === 0 ? '3px solid #FF5A5F' : '3px solid transparent',
-                    background: idx === 0 ? '#FFF5F5' : '#fff',
+                    padding: '14px 18px',
+                    fontSize: '14px',
+                    fontWeight: i === 0 ? 600 : 400,
+                    color: i === 0 ? '#FF5A5F' : '#717171',
+                    background: 'none',
+                    border: 'none',
+                    borderBottom: i === 0 ? '2px solid #FF5A5F' : '2px solid transparent',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
                   }}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p
-                        className="text-sm font-medium truncate"
-                        style={{ color: idx === 0 ? '#FF5A5F' : '#222222' }}
-                      >
-                        {rg.role}
-                      </p>
-                      <p className="text-xs mt-0.5" style={{ color: '#717171' }}>
-                        {formatCurrency(rg.minTC, 'INR')} –{' '}
-                        {formatCurrency(rg.maxTC, 'INR')}
-                      </p>
-                    </div>
-                    <div className="flex-shrink-0 text-right">
-                      <p
-                        className="text-sm font-semibold"
-                        style={{ color: '#222222' }}
-                      >
-                        {formatCurrency(rg.medianTC, 'INR')}
-                      </p>
-                      <p className="text-xs" style={{ color: '#717171' }}>
-                        {rg.count} records
-                      </p>
-                    </div>
-                  </div>
-                </li>
+                  {tab}
+                  {tab === 'Insights' && (
+                    <span style={{ background: '#FF5A5F', color: '#fff', borderRadius: '4px', fontSize: '10px', fontWeight: 700, padding: '1px 5px' }}>New</span>
+                  )}
+                </button>
               ))}
-            </ul>
-          </aside>
-
-          {/* ── Right Content ──────────────────────────────────────────────── */}
-          <div className="flex-1 min-w-0 space-y-6">
-
-            {/* Role Detail Panel */}
-            {firstRole && (
-              <div
-                className="rounded-xl p-6"
-                style={{ border: '1px solid #E5E7EB', background: '#fff' }}
-              >
-                <RoleDetailPanel group={firstRole} />
-              </div>
-            )}
-
-            {/* Salary Table — client component */}
-            <div>
-              <h2 className="text-base font-semibold mb-4" style={{ color: '#222222' }}>
-                All Salary Records
-              </h2>
-              <Suspense fallback={<TableSkeleton />}>
-                <SalaryTable initialData={salaries} />
-              </Suspense>
             </div>
           </div>
         </div>
 
-        {/* ── People Also Viewed ──────────────────────────────────────────── */}
-        {alsoViewed.length > 0 && (
-          <section className="mt-10">
-            <h2 className="text-lg font-bold mb-4" style={{ color: '#222222' }}>
-              People also viewed
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {alsoViewed.map((rg) => (
-                <div
-                  key={rg.role}
-                  className="rounded-xl p-4 cursor-pointer transition-shadow hover:shadow-md"
-                  style={{ border: '1px solid #E5E7EB', background: '#fff' }}
-                >
-                  <p className="text-sm font-semibold mb-1 truncate" style={{ color: '#222222' }}>
-                    {rg.role}
-                  </p>
-                  <p className="text-lg font-bold" style={{ color: '#FF5A5F' }}>
-                    {formatCurrency(rg.medianTC, 'INR')}
-                  </p>
-                  <p className="text-xs mt-1" style={{ color: '#717171' }}>
-                    Median TC · {rg.count} records
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: '#717171' }}>
-                    {formatCurrency(rg.minTC, 'INR')} – {formatCurrency(rg.maxTC, 'INR')}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* ── Main content: Sidebar + Detail panel ──────────────────────────── */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+          <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '24px', alignItems: 'flex-start' }}>
 
-        {/* ── Footer CTA ─────────────────────────────────────────────────── */}
-        <div
-          className="mt-10 rounded-2xl p-8 flex flex-col sm:flex-row items-center justify-between gap-6"
-          style={{
-            background: 'linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 100%)',
-            border: '1px solid #FECACA',
-          }}
-        >
-          <div>
-            <h3 className="text-lg font-bold mb-1" style={{ color: '#222222' }}>
-              Didn&apos;t find your role?
-            </h3>
-            <p className="text-sm" style={{ color: '#717171' }}>
-              Submit your salary and help others make informed decisions.
-            </p>
+            {/* ── Left: Roles sidebar ─────────────────────────────────────────── */}
+            <div style={{ border: '1px solid #E5E7EB', borderRadius: '12px', background: '#fff', overflow: 'hidden' }}>
+              <div style={{ padding: '16px', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#111827' }}>All Roles</div>
+                  <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '2px' }}>{roleGroups.length} roles</div>
+                </div>
+                <select style={{ fontSize: '12px', padding: '4px 8px', border: '1px solid #E5E7EB', borderRadius: '6px', color: '#484848', background: '#fff', fontFamily: 'inherit' }}>
+                  <option>Sort by Popular</option>
+                  <option>Sort by TC</option>
+                </select>
+              </div>
+
+              <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
+                {roleGroups.map((rg, i) => (
+                  <div
+                    key={rg.role}
+                    style={{
+                      padding: '12px 16px',
+                      borderBottom: '1px solid #F9FAFB',
+                      borderLeft: i === 0 ? '3px solid #FF5A5F' : '3px solid transparent',
+                      background: i === 0 ? '#FFF5F5' : '#fff',
+                      cursor: 'pointer',
+                      transition: 'background 0.15s',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: i === 0 ? 600 : 500, color: i === 0 ? '#FF5A5F' : '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}>
+                        {rg.role}
+                        {i === 0 && <span style={{ marginLeft: '4px', fontSize: '10px' }}>✏️</span>}
+                      </span>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#0369A1', flexShrink: 0 }}>
+                        {formatCurrency(rg.medianTC, primaryCurrency)}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
+                      {formatCurrency(rg.minTC, primaryCurrency)} – {formatCurrency(rg.maxTC, primaryCurrency)}
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#D1D5DB', marginTop: '2px' }}>{rg.count} records</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ padding: '14px', borderTop: '1px solid #E5E7EB', textAlign: 'center' }}>
+                <a href="#all-records" style={{ fontSize: '13px', color: '#FF5A5F', fontWeight: 500, textDecoration: 'none' }}>
+                  View all {roleGroups.length} roles →
+                </a>
+              </div>
+            </div>
+
+            {/* ── Right: Role detail ──────────────────────────────────────────── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {firstRole && (
+                <>
+                  {/* Role header */}
+                  <div style={{ border: '1px solid #E5E7EB', borderRadius: '12px', background: '#fff', padding: '24px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                      <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#111827', margin: 0 }}>{firstRole.role}</h2>
+                      <span style={{ background: '#DCFCE7', color: '#16A34A', border: '1px solid #BBF7D0', borderRadius: '999px', fontSize: '11px', fontWeight: 600, padding: '2px 8px' }}>✓ Verified</span>
+                    </div>
+                    <p style={{ fontSize: '13px', color: '#9CA3AF', margin: '0 0 20px' }}>
+                      {firstRole.count} {firstRole.count === 1 ? 'salary' : 'salaries'} submitted
+                    </p>
+
+                    {/* Big TC figure */}
+                    <div style={{ background: '#FFF5F5', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
+                      <div style={{ fontSize: '12px', color: '#9CA3AF', fontWeight: 500, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Pay (Annual)</div>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '36px', fontWeight: 800, color: '#FF5A5F', lineHeight: 1 }}>
+                          {formatCurrency(firstRole.medianTC, primaryCurrency)}
+                        </span>
+                        <span style={{ fontSize: '14px', color: '#9CA3AF' }}> / year</span>
+                      </div>
+                      {/* Range bar */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '12px', color: '#9CA3AF', whiteSpace: 'nowrap' }}>{formatCurrency(firstRole.minTC, primaryCurrency)}</span>
+                        <div style={{ flex: 1, height: '6px', background: '#FFE4E6', borderRadius: '3px', position: 'relative' }}>
+                          <div style={{ position: 'absolute', left: '0', top: 0, bottom: 0, width: '60%', background: 'linear-gradient(90deg, #FF5A5F 0%, #FF8C69 100%)', borderRadius: '3px' }} />
+                          <div style={{ position: 'absolute', left: '55%', top: '50%', transform: 'translate(-50%,-50%)', width: '12px', height: '12px', background: '#FF5A5F', borderRadius: '50%', border: '2px solid #fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                        </div>
+                        <span style={{ fontSize: '12px', color: '#9CA3AF', whiteSpace: 'nowrap' }}>{formatCurrency(firstRole.maxTC, primaryCurrency)}</span>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#9CA3AF', textAlign: 'center', marginTop: '4px' }}>Most reports</div>
+                    </div>
+
+                    {/* Compensation breakdown */}
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827', marginBottom: '12px' }}>Compensation Breakdown</div>
+                      {(() => {
+                        const total = firstRole.avgBase + firstRole.avgBonus + firstRole.avgStock
+                        if (total === 0) return null
+                        const basePct = Math.round((firstRole.avgBase / total) * 100)
+                        const bonusPct = Math.round((firstRole.avgBonus / total) * 100)
+                        const stockPct = 100 - basePct - bonusPct
+                        return (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                            {[
+                              { label: 'Base Pay', value: firstRole.avgBase, pct: basePct, color: '#3B82F6' },
+                              { label: 'Bonus', value: firstRole.avgBonus, pct: bonusPct, color: '#F59E0B' },
+                              { label: 'Equity', value: firstRole.avgStock, pct: stockPct, color: '#8B5CF6' },
+                            ].map(({ label, value, pct, color }) => (
+                              <div key={label} style={{ padding: '12px', border: '1px solid #F3F4F6', borderRadius: '8px', background: '#FAFAFA' }}>
+                                <div style={{ width: '28px', height: '4px', background: color, borderRadius: '2px', marginBottom: '8px' }} />
+                                <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>{formatCurrency(value, primaryCurrency)}</div>
+                                <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '2px' }}>{label}</div>
+                                <div style={{ fontSize: '11px', fontWeight: 600, color, marginTop: '2px' }}>{pct}%</div>
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Compare banner */}
+                  <div style={{ border: '1px solid #E5E7EB', borderRadius: '12px', background: '#FFF5F5', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '36px', height: '36px', background: '#FF5A5F', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>📈</div>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>High performer? See how your compensation compares.</div>
+                      </div>
+                    </div>
+                    <a href="/compare" style={{ padding: '8px 16px', background: '#FF5A5F', color: '#fff', borderRadius: '8px', fontWeight: 600, fontSize: '13px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                      Compare your salary →
+                    </a>
+                  </div>
+                </>
+              )}
+
+              {/* People also viewed */}
+              {roleGroups.length > 1 && (
+                <div style={{ border: '1px solid #E5E7EB', borderRadius: '12px', background: '#fff', padding: '20px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#111827', margin: '0 0 14px' }}>People also viewed</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                    {roleGroups.slice(1, 5).map((rg) => (
+                      <div key={rg.role} style={{ padding: '14px', border: '1px solid #F3F4F6', borderRadius: '10px', background: '#FAFAFA' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                          <div style={{ width: '28px', height: '28px', background: '#FFF5F5', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>💼</div>
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rg.role}</span>
+                        </div>
+                        <div style={{ fontSize: '16px', fontWeight: 700, color: '#FF5A5F' }}>
+                          {formatCurrency(rg.medianTC, primaryCurrency)}
+                          <span style={{ fontSize: '11px', fontWeight: 400, color: '#9CA3AF' }}> /yr</span>
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '2px' }}>
+                          {formatCurrency(rg.minTC, primaryCurrency)} – {formatCurrency(rg.maxTC, primaryCurrency)}
+                        </div>
+                        <a href="#" style={{ display: 'block', fontSize: '11px', color: '#FF5A5F', fontWeight: 500, textDecoration: 'none', marginTop: '8px' }}>View insights →</a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-          <a
-            href="/salaries/submit"
-            className="flex-shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-opacity hover:opacity-90"
-            style={{ background: '#FF5A5F', color: '#fff' }}
-          >
-            Submit your salary →
-          </a>
+
+          {/* ── Full Salary Table ──────────────────────────────────────────────── */}
+          <div id="all-records" style={{ marginTop: '32px', border: '1px solid #E5E7EB', borderRadius: '12px', background: '#fff', overflow: 'hidden' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#111827', margin: '0 0 2px' }}>All Salary Records</h2>
+                <p style={{ fontSize: '12px', color: '#9CA3AF', margin: 0 }}>{count} records · Filter and search below</p>
+              </div>
+            </div>
+            <Suspense fallback={<TableSkeleton />}>
+              <SalaryTable initialData={salaries} />
+            </Suspense>
+          </div>
+
+          {/* ── Submit salary footer CTA ──────────────────────────────────────── */}
+          <div style={{ marginTop: '24px', border: '1px solid #E5E7EB', borderRadius: '12px', background: 'linear-gradient(135deg, #FFF5F5 0%, #FFF0F0 100%)', padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{ width: '44px', height: '44px', background: '#FF5A5F', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>📋</div>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: 700, color: '#111827', marginBottom: '2px' }}>Didn't find your role?</div>
+                <div style={{ fontSize: '13px', color: '#6B7280' }}>Submit your salary and help others make informed decisions.</div>
+              </div>
+            </div>
+            <a href="/salaries/submit" style={{ padding: '12px 24px', background: '#FF5A5F', color: '#fff', borderRadius: '8px', fontWeight: 600, fontSize: '14px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+              Submit your salary →
+            </a>
+          </div>
         </div>
       </div>
     </>
   )
 }
 
-// ── Loading Skeleton ─────────────────────────────────────────────────────────
-
 function TableSkeleton() {
   return (
-    <div
-      className="rounded-xl p-4"
-      style={{ border: '1px solid #E5E7EB', background: '#fff' }}
-    >
-      <div className="space-y-3">
+    <div style={{ padding: '16px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {Array.from({ length: 8 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-10 rounded-lg animate-pulse"
-            style={{ background: '#F3F4F6' }}
-          />
+          <div key={i} className="skeleton" style={{ height: '44px', borderRadius: '8px' }} />
         ))}
       </div>
     </div>
