@@ -142,10 +142,11 @@ export default async function HomePage() {
                       {company.name.slice(0, 2).toUpperCase()}
                     </div>
                     <img
-                      src={`https://logo.clearbit.com/${domain}`}
+                      src={`https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domain}&size=128`}
                       alt={company.name}
                       className="absolute inset-0 w-12 h-12 rounded-xl object-contain bg-white"
                       style={{ padding: '3px', border: '1px solid rgba(0,0,0,0.06)' }}
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
                   </div>
                   <div className="text-xs font-semibold truncate w-full" style={{ color: '#222222' }}>{company.name}</div>

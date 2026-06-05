@@ -41,7 +41,8 @@ const LOGO_DOMAINS: Record<string, string> = {
 }
 
 function getLogoUrl(slug: string) {
-  return `https://logo.clearbit.com/${LOGO_DOMAINS[slug] ?? slug + '.com'}`
+  const domain = LOGO_DOMAINS[slug] ?? slug + '.com'
+  return `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domain}&size=128`
 }
 
 const TABS = ['Salaries', 'Insights', 'Benefits', 'Photos', 'Reviews', 'Jobs']

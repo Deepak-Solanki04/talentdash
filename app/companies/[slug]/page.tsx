@@ -6,6 +6,8 @@ import { serializePrismaRecord, formatCurrency, computeMedian, formatLevel } fro
 import LevelBadge from '@/components/ui/LevelBadge'
 import type { Level, SalaryRecord } from '@/types/salary'
 import { VALID_LEVELS } from '@/lib/config'
+import FollowButton from '@/components/features/FollowButton'
+import CompanyContentManager from '@/components/features/CompanyContentManager'
 
 const LOGO_DOMAINS: Record<string, string> = {
   google: 'google.com',
@@ -23,7 +25,8 @@ const LOGO_DOMAINS: Record<string, string> = {
 }
 
 function getLogoUrl(slug: string): string {
-  return `https://logo.clearbit.com/${LOGO_DOMAINS[slug] ?? slug + '.com'}`
+  const domain = LOGO_DOMAINS[slug] ?? slug + '.com'
+  return `https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domain}&size=128`
 }
 
 export async function generateStaticParams() {
@@ -132,32 +135,7 @@ export default async function CompanyPage({ params }: Props) {
 
       <div style={{ background: '#fff', minHeight: '100vh' }}>
 
-        {/* ── Sub-nav tabs (sticky) ──────────────────────────────────────────── */}
-        <div style={{ position: 'sticky', top: '64px', zIndex: 40, background: '#fff', borderBottom: '1px solid #E5E7EB' }}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <div style={{ display: 'flex', gap: '0', overflowX: 'auto' }}>
-              {['Overview', 'Reviews', 'Salaries', 'Benefits', 'Jobs', 'Interviews', 'Q&A'].map((tab, i) => (
-                <button
-                  key={tab}
-                  style={{
-                    padding: '14px 18px',
-                    fontSize: '14px',
-                    fontWeight: i === 0 ? 600 : 400,
-                    color: i === 0 ? '#FF5A5F' : '#717171',
-                    background: 'none',
-                    border: 'none',
-                    borderBottom: i === 0 ? '2px solid #FF5A5F' : '2px solid transparent',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    transition: 'color 0.15s',
-                  }}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+        {/* ── Sub-nav tabs are now inside CompanyContentManager ──────────────── */}
 
         {/* ── Company Header ─────────────────────────────────────────────────── */}
         <div style={{ borderBottom: '1px solid #E5E7EB', background: '#fff' }}>
@@ -244,9 +222,7 @@ export default async function CompanyPage({ params }: Props) {
 
                 {/* Action buttons */}
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                  <button style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#fff', color: '#222222', border: '1.5px solid #E5E7EB', borderRadius: '8px', fontWeight: 500, fontSize: '13px', cursor: 'pointer' }}>
-                    + Follow
-                  </button>
+                  <FollowButton variant="secondary" />
                   <Link
                     href={`/compare?c1=${slug}`}
                     style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#fff', color: '#222222', border: '1.5px solid #E5E7EB', borderRadius: '8px', fontWeight: 500, fontSize: '13px', textDecoration: 'none' }}
@@ -280,9 +256,10 @@ export default async function CompanyPage({ params }: Props) {
         </div>
 
         {/* ── Main content ────────────────────────────────────────────────────── */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-
-          {/* ── At a Glance ──────────────────────────────────────────────────── */}
+        <CompanyContentManager 
+          overviewContent={
+            <>
+              {/* ── At a Glance ──────────────────────────────────────────────────── */}
           <section style={{ marginBottom: '24px' }}>
             <div style={{ border: '1px solid #E5E7EB', borderRadius: '12px', background: '#fff', padding: '24px' }}>
               <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#111827', margin: '0 0 16px' }}>At a glance</h2>
@@ -418,7 +395,10 @@ export default async function CompanyPage({ params }: Props) {
               </div>
             </div>
           </section>
-
+          </>
+        }
+        salariesContent={
+          <>
           {/* ── Level Distribution ────────────────────────────────────────────── */}
           {totalRecords > 0 && (
             <section style={{ marginBottom: '24px' }}>
@@ -498,7 +478,10 @@ export default async function CompanyPage({ params }: Props) {
               </Link>
             </div>
           </section>
-
+          </>
+        }
+        faqContent={
+          <>
           {/* ── FAQ ──────────────────────────────────────────────────────────── */}
           <section style={{ marginBottom: '24px' }}>
             <div style={{ border: '1px solid #E5E7EB', borderRadius: '12px', background: '#fff', padding: '24px' }}>
@@ -520,7 +503,10 @@ export default async function CompanyPage({ params }: Props) {
               <a href="#" style={{ display: 'inline-block', marginTop: '16px', fontSize: '13px', color: '#FF5A5F', fontWeight: 500, textDecoration: 'none' }}>View all FAQs →</a>
             </div>
           </section>
-
+          </>
+        }
+        similarCompaniesContent={
+          <>
           {/* ── Similar companies ─────────────────────────────────────────────── */}
           {similarCompanies.length > 0 && (
             <section style={{ marginBottom: '24px' }}>
@@ -582,8 +568,9 @@ export default async function CompanyPage({ params }: Props) {
               </div>
             </div>
           </section>
+          </>
+        } />
 
-        </div>
       </div>
     </>
   )
