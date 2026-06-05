@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { serializePrismaRecord, formatCurrency, computeMedian } from '@/lib/format'
 import SalaryTable from '@/components/features/SalaryTable'
 import type { SalaryWithCompany } from '@/types/salary'
+import SalariesContentManager from '@/components/features/SalariesContentManager'
 
 export const revalidate = 3600
 
@@ -232,36 +233,10 @@ export default async function SalariesPage() {
         </div>
 
         {/* ── Tabs ──────────────────────────────────────────────────────────── */}
-        <div style={{ borderBottom: '1px solid #E5E7EB', background: '#fff' }}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <div style={{ display: 'flex', gap: '0', overflowX: 'auto' }}>
-              {TABS.map((tab, i) => (
-                <button
-                  key={tab}
-                  style={{
-                    padding: '14px 18px',
-                    fontSize: '14px',
-                    fontWeight: i === 0 ? 600 : 400,
-                    color: i === 0 ? '#FF5A5F' : '#717171',
-                    background: 'none',
-                    border: 'none',
-                    borderBottom: i === 0 ? '2px solid #FF5A5F' : '2px solid transparent',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  {tab}
-                  {tab === 'Insights' && (
-                    <span style={{ background: '#FF5A5F', color: '#fff', borderRadius: '4px', fontSize: '10px', fontWeight: 700, padding: '1px 5px' }}>New</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+        <SalariesContentManager salariesContent={
+          <>
+          {/* ── Main Layout ─────────────────────────────────────────────────── */}
+
 
         {/* ── Main content: Sidebar + Detail panel ──────────────────────────── */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
@@ -380,6 +355,14 @@ export default async function SalariesPage() {
                       })()}
                     </div>
                   </div>
+                    <Link
+                      href="#"
+                      onClick={(e) => { e.preventDefault(); alert('Submitting a salary is coming soon!'); }}
+                      className="btn-primary text-sm px-6 py-3 rounded-lg w-full mb-3 text-center block"
+                      style={{ textDecoration: 'none' }}
+                    >
+                      + Add a Salary (Coming soon)
+                    </Link>
 
                   {/* Compare banner */}
                   <div style={{ border: '1px solid #E5E7EB', borderRadius: '12px', background: '#FFF5F5', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
@@ -449,7 +432,8 @@ export default async function SalariesPage() {
               Submit your salary →
             </a>
           </div>
-        </div>
+          </>
+        } />
       </div>
     </>
   )

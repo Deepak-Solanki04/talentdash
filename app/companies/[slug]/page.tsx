@@ -229,10 +229,10 @@ export default async function CompanyPage({ params }: Props) {
                     Compare
                   </Link>
                   <Link
-                    href={`/salaries/submit`}
+                    href={`#`}
                     style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#FF5A5F', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '13px', textDecoration: 'none' }}
                   >
-                    Write a Review
+                    Write a Review (Coming Soon)
                   </Link>
                 </div>
               </div>
@@ -557,11 +557,11 @@ export default async function CompanyPage({ params }: Props) {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
-                <button style={{ padding: '10px 18px', background: '#FF5A5F', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
-                  Write a Review
-                </button>
-                <Link href="/salaries/submit" style={{ padding: '10px 18px', background: '#fff', color: '#222222', border: '1.5px solid #E5E7EB', borderRadius: '8px', fontWeight: 600, fontSize: '13px', textDecoration: 'none' }}>
-                  Add Salary
+                <Link href="#" style={{ display: 'inline-block', padding: '10px 18px', background: '#FF5A5F', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '13px', textDecoration: 'none' }}>
+                  Write a Review (Coming Soon)
+                </Link>
+                <Link href="#" style={{ display: 'inline-block', padding: '10px 18px', background: '#fff', color: '#222222', border: '1.5px solid #E5E7EB', borderRadius: '8px', fontWeight: 600, fontSize: '13px', textDecoration: 'none' }}>
+                  Add Salary (Coming Soon)
                 </Link>
               </div>
             </div>
