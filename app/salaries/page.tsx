@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
+import Link from 'next/link'
 import { prisma } from '@/lib/db'
 import { serializePrismaRecord, formatCurrency, computeMedian } from '@/lib/format'
 import SalaryTable from '@/components/features/SalaryTable'
@@ -357,9 +358,8 @@ export default async function SalariesPage() {
                   </div>
                     <Link
                       href="#"
-                      onClick={(e) => { e.preventDefault(); alert('Submitting a salary is coming soon!'); }}
                       className="btn-primary text-sm px-6 py-3 rounded-lg w-full mb-3 text-center block"
-                      style={{ textDecoration: 'none' }}
+                      style={{ textDecoration: 'none', opacity: 0.7, cursor: 'not-allowed' }}
                     >
                       + Add a Salary (Coming soon)
                     </Link>
@@ -431,6 +431,7 @@ export default async function SalariesPage() {
             <a href="/salaries/submit" style={{ padding: '12px 24px', background: '#FF5A5F', color: '#fff', borderRadius: '8px', fontWeight: 600, fontSize: '14px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
               Submit your salary →
             </a>
+          </div>
           </div>
           </>
         } />
