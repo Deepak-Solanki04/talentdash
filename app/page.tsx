@@ -146,7 +146,6 @@ export default async function HomePage() {
                       alt={company.name}
                       className="absolute inset-0 w-12 h-12 rounded-xl object-contain bg-white"
                       style={{ padding: '3px', border: '1px solid rgba(0,0,0,0.06)' }}
-                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
                   </div>
                   <div className="text-xs font-semibold truncate w-full" style={{ color: '#222222' }}>{company.name}</div>
