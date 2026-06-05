@@ -194,6 +194,7 @@ export default async function CompanyPage({ params }: Props) {
                   src={logoUrl}
                   alt={`${company.name} logo`}
                   style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', padding: '8px', background: '#fff' }}
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
               </div>
 
@@ -548,6 +549,7 @@ export default async function CompanyPage({ params }: Props) {
                           src={getLogoUrl(co.slug)}
                           alt={co.name}
                           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', padding: '4px', background: '#fff', borderRadius: '12px', border: '1px solid #E5E7EB' }}
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
                         />
                       </div>
                       <span style={{ fontSize: '13px', fontWeight: 600, color: '#111827', textAlign: 'center' }}>{co.name}</span>

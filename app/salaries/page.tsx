@@ -177,6 +177,7 @@ export default async function SalariesPage() {
                       src={getLogoUrl(slug)}
                       alt={slug}
                       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', padding: '6px', background: '#fff', borderRadius: '10px', border: '1px solid #E5E7EB', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
                   </div>
                 ))}
