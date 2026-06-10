@@ -15,9 +15,14 @@ export default function HeroSearch({ options }: { options: SearchOption[] }) {
   const router = useRouter()
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const filtered = query.trim() === '' 
+  const normalizedQuery = query.toLowerCase().trim()
+  const filtered = normalizedQuery === '' 
     ? [] 
-    : options.filter(o => o.name.toLowerCase().includes(query.toLowerCase())).slice(0, 6)
+    : options.filter(o => {
+        const normalizedName = o.name.toLowerCase()
+        return normalizedName.includes(normalizedQuery) || 
+               (normalizedName.length >= 2 && normalizedQuery.startsWith(normalizedName))
+      }).slice(0, 6)
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
