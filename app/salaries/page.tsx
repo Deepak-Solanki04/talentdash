@@ -7,7 +7,7 @@ import SalaryTable from '@/components/features/SalaryTable'
 import type { SalaryWithCompany } from '@/types/salary'
 import SalariesContentManager from '@/components/features/SalariesContentManager'
 
-export const revalidate = 3600
+
 
 export const metadata: Metadata = {
   title: 'Salary Data — India Tech Salaries by Company & Level | TalentDash',
@@ -49,8 +49,24 @@ function getLogoUrl(slug: string) {
 
 const TABS = ['Salaries', 'Insights', 'Benefits', 'Photos', 'Reviews', 'Jobs']
 
-export default async function SalariesPage() {
+export default async function SalariesPage(props: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
+  const sp = await props.searchParams
+  const location = typeof sp.location === 'string' ? sp.location : undefined
+  const company = typeof sp.company === 'string' ? sp.company : undefined
+  const roleParam = typeof sp.role === 'string' ? sp.role : undefined
+  const exp = typeof sp.exp === 'string' ? sp.exp : undefined
+
+  const whereClause: any = {}
+  if (location) whereClause.location = { contains: location, mode: 'insensitive' }
+  if (company) {
+    whereClause.OR = [
+      { company: { name: { contains: company, mode: 'insensitive' } } },
+      { role: { contains: company, mode: 'insensitive' } }
+    ]
+  }
+
   const rawSalaries = await prisma.salary.findMany({
+    where: whereClause,
     include: { company: true },
     orderBy: { total_compensation: 'desc' },
   })
@@ -92,7 +108,25 @@ export default async function SalariesPage() {
     }))
     .sort((a, b) => b.count - a.count)
 
-  const firstRole = roleGroups[0]
+    .sort((a, b) => b.count - a.count)
+
+  const targetRole = roleParam ? roleGroups.find(r => r.role.toLowerCase() === roleParam.toLowerCase()) : undefined
+  const firstRole = targetRole || roleGroups[0]
+
+  const buildRoleUrl = (r: string) => {
+    const params = new URLSearchParams()
+    if (company) params.append('company', company)
+    if (location) params.append('location', location)
+    if (exp) params.append('exp', exp)
+    params.append('role', r)
+    return `/salaries?${params.toString()}`
+  }
+  
+  let pageTitle = 'India Tech Salaries'
+  if (location && roleParam) pageTitle = `${roleParam} Salaries in ${location}`
+  else if (location) pageTitle = `Tech Salaries in ${location}`
+  else if (roleParam) pageTitle = `${roleParam} Salaries in India`
+  else if (company) pageTitle = `Salaries for "${company}"`
 
   // Unique companies
   const uniqueCompanies = [...new Set(salaries.map((s) => s.company.slug))].slice(0, 8)
@@ -123,14 +157,14 @@ export default async function SalariesPage() {
                 {/* Title row */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '6px' }}>
                   <h1 style={{ fontSize: 'clamp(28px,4vw,40px)', fontWeight: 700, color: '#111827', margin: 0, lineHeight: '1.2' }}>
-                    India Tech Salaries
+                    {pageTitle}
                   </h1>
                   <span style={{ background: '#DCFCE7', color: '#16A34A', border: '1px solid #BBF7D0', borderRadius: '999px', fontSize: '12px', fontWeight: 600, padding: '3px 12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     ✓ Verified
                   </span>
                 </div>
                 <p style={{ fontSize: '14px', color: '#6B7280', margin: '0 0 24px' }}>
-                  Based on {count} verified salary submissions in India · Updated June 2026
+                  Based on {count} verified salary submissions {location ? `in ${location}` : 'in India'} · Updated June 2026
                 </p>
 
                 {/* 3 stat cards */}
@@ -257,33 +291,40 @@ export default async function SalariesPage() {
               </div>
 
               <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
-                {roleGroups.map((rg, i) => (
-                  <div
-                    key={rg.role}
-                    style={{
-                      padding: '12px 16px',
-                      borderBottom: '1px solid #F9FAFB',
-                      borderLeft: i === 0 ? '3px solid #FF5A5F' : '3px solid transparent',
-                      background: i === 0 ? '#FFF5F5' : '#fff',
-                      cursor: 'pointer',
-                      transition: 'background 0.15s',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: i === 0 ? 600 : 500, color: i === 0 ? '#FF5A5F' : '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}>
-                        {rg.role}
-                        {i === 0 && <span style={{ marginLeft: '4px', fontSize: '10px' }}>✏️</span>}
-                      </span>
-                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#0369A1', flexShrink: 0 }}>
-                        {formatCurrency(rg.medianTC, primaryCurrency)}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
-                      {formatCurrency(rg.minTC, primaryCurrency)} – {formatCurrency(rg.maxTC, primaryCurrency)}
-                    </div>
-                    <div style={{ fontSize: '10px', color: '#D1D5DB', marginTop: '2px' }}>{rg.count} records</div>
-                  </div>
-                ))}
+                {roleGroups.map((rg, i) => {
+                  const isActive = firstRole && firstRole.role === rg.role
+                  return (
+                    <Link
+                      key={rg.role}
+                      href={buildRoleUrl(rg.role)}
+                      scroll={false}
+                      style={{
+                        display: 'block',
+                        padding: '12px 16px',
+                        borderBottom: '1px solid #F9FAFB',
+                        borderLeft: isActive ? '3px solid #FF5A5F' : '3px solid transparent',
+                        background: isActive ? '#FFF5F5' : '#fff',
+                        cursor: 'pointer',
+                        textDecoration: 'none',
+                        transition: 'background 0.15s',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: isActive ? 600 : 500, color: isActive ? '#FF5A5F' : '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}>
+                          {rg.role}
+                          {isActive && <span style={{ marginLeft: '4px', fontSize: '10px' }}>✏️</span>}
+                        </span>
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: '#0369A1', flexShrink: 0 }}>
+                          {formatCurrency(rg.medianTC, primaryCurrency)}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
+                        {formatCurrency(rg.minTC, primaryCurrency)} – {formatCurrency(rg.maxTC, primaryCurrency)}
+                      </div>
+                      <div style={{ fontSize: '10px', color: '#D1D5DB', marginTop: '2px' }}>{rg.count} records</div>
+                    </Link>
+                  )
+                })}
               </div>
 
               <div style={{ padding: '14px', borderTop: '1px solid #E5E7EB', textAlign: 'center' }}>
