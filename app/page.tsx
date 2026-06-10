@@ -34,7 +34,7 @@ const LOGO_DOMAINS: Record<string, string> = {
 }
 
 export default async function HomePage() {
-  const [companies, recentSalaries, totalSalaries, totalCompanies, rolesData] = await Promise.all([
+  const [companies, recentSalaries, totalSalaries, totalCompanies, rolesData, locationsData] = await Promise.all([
     prisma.company.findMany({
       include: { salaries: { select: { total_compensation: true, currency: true } } },
       take: 12,
@@ -50,6 +50,10 @@ export default async function HomePage() {
       select: { role: true },
       distinct: ['role'],
     }),
+    prisma.salary.findMany({
+      select: { location: true },
+      distinct: ['location'],
+    }),
   ])
 
   const serializedCompanies = serializePrismaRecord(companies) as any[]
@@ -59,6 +63,7 @@ export default async function HomePage() {
     ...serializedCompanies.map(c => ({ type: 'company' as const, name: c.name, slug: c.slug })),
     ...rolesData.map(r => ({ type: 'role' as const, name: r.role, slug: encodeURIComponent(r.role) }))
   ]
+  const locations = locationsData.map(l => l.location)
 
   return (
     <div style={{ background: '#fff', minHeight: '100vh' }}>
@@ -90,23 +95,51 @@ export default async function HomePage() {
 
           {/* Hero Search */}
           <div className="flex flex-col items-center justify-center w-full mb-12">
-            <HeroSearch options={searchOptions} />
-          </div>
-
-          {/* Stats */}
-          <div className="inline-flex items-center gap-8 px-8 py-4 rounded-2xl border"
-            style={{ background: 'rgba(255,255,255,0.8)', borderColor: '#E5E7EB', backdropFilter: 'blur(8px)' }}>
-            {[
-              { value: `${totalSalaries}+`, label: 'Salary Records' },
-              { value: `${totalCompanies}+`, label: 'Companies' },
-              { value: '8+', label: 'Cities' },
-            ].map(({ value, label }, i) => (
-              <div key={label} className="text-center">
-                {i > 0 && <div className="hidden sm:block absolute left-0 top-1/2 -translate-y-1/2 w-px h-6 bg-gray-200" />}
-                <div className="text-xl font-bold" style={{ color: '#FF5A5F' }}>{value}</div>
-                <div className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>{label}</div>
+            <HeroSearch options={searchOptions} locations={locations} />
+            
+            {/* Trending Searches */}
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3 w-full">
+              <span className="text-sm font-medium mr-2" style={{ color: '#717171' }}>Trending searches:</span>
+              {['Software Engineer', 'Data Scientist', 'Product Manager', 'Marketing Manager', 'Remote Jobs'].map(tag => (
+                <Link key={tag} href={`/salaries?q=${encodeURIComponent(tag)}`} 
+                  className="px-4 py-1.5 rounded-full text-xs font-medium transition-colors hover:bg-gray-100"
+                  style={{ background: '#FFF0F0', color: '#FF5A5F', border: '1px solid #FFE4E6' }}>
+                  {tag}
+                </Link>
+              ))}
+            </div>
+            
+            {/* Trust Badges */}
+            <div className="mt-12 w-full max-w-4xl grid grid-cols-2 md:grid-cols-4 gap-6 pt-8 border-t border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="text-2xl" style={{ color: '#222' }}>🛡️</div>
+                <div>
+                  <div className="text-sm font-bold" style={{ color: '#222' }}>Verified & Trusted</div>
+                  <div className="text-[11px]" style={{ color: '#717171' }}>Real data. Real people.</div>
+                </div>
               </div>
-            ))}
+              <div className="flex items-center gap-3">
+                <div className="text-2xl" style={{ color: '#222' }}>👥</div>
+                <div>
+                  <div className="text-sm font-bold" style={{ color: '#222' }}>10M+ Users</div>
+                  <div className="text-[11px]" style={{ color: '#717171' }}>Across the globe</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-2xl" style={{ color: '#222' }}>🏢</div>
+                <div>
+                  <div className="text-sm font-bold" style={{ color: '#222' }}>500K+ Companies</div>
+                  <div className="text-[11px]" style={{ color: '#717171' }}>Researched & reviewed</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-2xl" style={{ color: '#222' }}>🔒</div>
+                <div>
+                  <div className="text-sm font-bold" style={{ color: '#222' }}>100% Free</div>
+                  <div className="text-[11px]" style={{ color: '#717171' }}>No hidden charges</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
