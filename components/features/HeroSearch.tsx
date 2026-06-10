@@ -47,13 +47,14 @@ export default function HeroSearch({ options, locations }: { options: SearchOpti
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (filtered.length > 0) {
+    if (query.trim() !== '' && filtered.length > 0) {
       handleSelect(filtered[0])
-    } else if (query.trim() !== '') {
-      let url = `/salaries?q=${encodeURIComponent(query)}`
-      if (location) url += `&location=${location}`
-      if (experience) url += `&exp=${experience}`
-      router.push(url)
+    } else if (query.trim() !== '' || location || experience) {
+      const params = new URLSearchParams()
+      if (query.trim() !== '') params.append('company', query.trim())
+      if (location) params.append('location', location)
+      if (experience) params.append('exp', experience)
+      router.push(`/salaries?${params.toString()}`)
     }
   }
 
