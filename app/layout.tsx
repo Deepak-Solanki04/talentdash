@@ -23,6 +23,8 @@ export const metadata: Metadata = {
   },
 }
 
+import Sidebar from '@/components/ui/Sidebar'
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -30,9 +32,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.variable}>
-      <body className="bg-white text-[#222222] antialiased min-h-screen">
-        <Navbar />
-        <main>{children}</main>
+      <body className="bg-white text-[#222222] antialiased min-h-screen flex">
+        <Sidebar />
+        <main className="flex-1 ml-[280px] bg-white min-h-screen">
+          {children}
+        </main>
       </body>
     </html>
   )
