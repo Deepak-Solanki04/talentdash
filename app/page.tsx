@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { prisma } from '@/lib/db'
 import { serializePrismaRecord, formatCurrency, computeMedian } from '@/lib/format'
+import HeroSearch from '@/components/features/HeroSearch'
 
 export const revalidate = 3600
 
@@ -33,7 +34,7 @@ const LOGO_DOMAINS: Record<string, string> = {
 }
 
 export default async function HomePage() {
-  const [companies, recentSalaries, totalSalaries, totalCompanies] = await Promise.all([
+  const [companies, recentSalaries, totalSalaries, totalCompanies, rolesData] = await Promise.all([
     prisma.company.findMany({
       include: { salaries: { select: { total_compensation: true, currency: true } } },
       take: 12,
@@ -45,10 +46,19 @@ export default async function HomePage() {
     }),
     prisma.salary.count(),
     prisma.company.count(),
+    prisma.salary.findMany({
+      select: { role: true },
+      distinct: ['role'],
+    }),
   ])
 
   const serializedCompanies = serializePrismaRecord(companies) as any[]
   const serializedSalaries = serializePrismaRecord(recentSalaries) as any[]
+  
+  const searchOptions = [
+    ...serializedCompanies.map(c => ({ type: 'company' as const, name: c.name, slug: c.slug })),
+    ...rolesData.map(r => ({ type: 'role' as const, name: r.role, slug: encodeURIComponent(r.role) }))
+  ]
 
   return (
     <div style={{ background: '#fff', minHeight: '100vh' }}>
@@ -78,16 +88,14 @@ export default async function HomePage() {
             Structured salary data for Indian tech professionals. Filter by level, company, and location. Compare offers side-by-side.
           </p>
 
-          {/* CTA buttons */}
-          <div className="flex flex-wrap items-center justify-center gap-3 mb-12">
-            <Link href="/salaries"
-              className="btn-primary text-sm px-7 py-3 rounded-xl">
-              Explore Salaries →
-            </Link>
-            <Link href="/companies"
-              className="btn-ghost text-sm px-7 py-3 rounded-xl">
-              Browse Companies
-            </Link>
+          {/* Hero Search & CTAs */}
+          <div className="flex flex-col items-center justify-center w-full mb-12">
+            <HeroSearch options={searchOptions} />
+            <div className="mt-2">
+              <Link href="#" className="text-sm font-semibold underline decoration-2 underline-offset-4 transition-colors hover:text-gray-900" style={{ color: '#FF5A5F' }}>
+                Add your salary anonymously →
+              </Link>
+            </div>
           </div>
 
           {/* Stats */}
@@ -113,7 +121,7 @@ export default async function HomePage() {
         {/* ── Popular Companies ─────────────────────────────────────────────── */}
         <section className="py-10 border-t" style={{ borderColor: '#F3F4F6' }}>
           <div className="flex items-center justify-between mb-6">
-            <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#222222', margin: 0 }}>Popular Companies</h2>
+            <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#222222', margin: 0 }}>Trending Companies</h2>
             <Link href="/companies" className="text-sm font-medium" style={{ color: '#FF5A5F' }}>
               View all →
             </Link>
