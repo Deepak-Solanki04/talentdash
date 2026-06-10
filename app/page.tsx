@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { prisma } from '@/lib/db'
 import { serializePrismaRecord, formatCurrency, computeMedian } from '@/lib/format'
-import HeroSearch from '@/components/features/HeroSearch'
+import CompanyHeroSearch from '@/components/features/CompanyHeroSearch'
 
 export const revalidate = 3600
 
@@ -11,11 +11,6 @@ export const metadata: Metadata = {
   description:
     'Structured salary data, company reviews, and interview experiences for Indian tech professionals. Compare offers, discover compensation by level, and make career decisions with real data.',
   alternates: { canonical: 'https://talentdash.in' },
-  openGraph: {
-    title: 'TalentDash — Career Intelligence for India',
-    description: 'Real salary data. Real companies. Real decisions.',
-    url: 'https://talentdash.in',
-  },
 }
 
 const LOGO_DOMAINS: Record<string, string> = {
@@ -31,276 +26,344 @@ const LOGO_DOMAINS: Record<string, string> = {
   wipro: 'wipro.com',
   meesho: 'meesho.com',
   zepto: 'zepto.com',
+  apple: 'apple.com',
+  netflix: 'netflix.com',
+  tesla: 'tesla.com',
+  adobe: 'adobe.com',
+  salesforce: 'salesforce.com',
+  ibm: 'ibm.com',
+  oracle: 'oracle.com',
+  sap: 'sap.com',
+  hcltech: 'hcltech.com',
+  openai: 'openai.com',
+  anthropic: 'anthropic.com',
+  databricks: 'databricks.com',
+  cohere: 'cohere.com',
+  huggingface: 'huggingface.co',
+  midjourney: 'midjourney.com',
 }
 
-export default async function HomePage() {
-  const [companies, recentSalaries, totalSalaries, totalCompanies, rolesData, locationsData] = await Promise.all([
-    prisma.company.findMany({
-      include: { salaries: { select: { total_compensation: true, currency: true } } },
-      take: 12,
-    }),
-    prisma.salary.findMany({
-      include: { company: { select: { name: true, slug: true } } },
-      orderBy: { total_compensation: 'desc' },
-      take: 6,
-    }),
-    prisma.salary.count(),
-    prisma.company.count(),
-    prisma.salary.findMany({
-      select: { role: true },
-      distinct: ['role'],
-    }),
-    prisma.salary.findMany({
-      select: { location: true },
-      distinct: ['location'],
-    }),
-  ])
+const COMPANY_GRADIENTS: Record<string, string> = {
+  google: 'linear-gradient(135deg, #e3f2fd 0%, #fce4ec 100%)',
+  amazon: 'linear-gradient(135deg, #fff3e0 0%, #fffde7 100%)',
+  apple: 'linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%)',
+  microsoft: 'linear-gradient(135deg, #e0f7fa 0%, #e3f2fd 100%)',
+  meta: 'linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%)',
+  netflix: 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
+  tesla: 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
+  adobe: 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
+  salesforce: 'linear-gradient(135deg, #e0f7fa 0%, #e3f2fd 100%)',
+  infosys: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
+  tcs: 'linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%)',
+  ibm: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
+  oracle: 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
+  sap: 'linear-gradient(135deg, #e0f7fa 0%, #bbdefb 100%)',
+  hcltech: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
+  // AI
+  openai: 'linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%)',
+  nvidia: 'linear-gradient(135deg, #f1f8e9 0%, #dcedc8 100%)',
+  anthropic: 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)',
+  googledeepmind: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
+  microsoftai: 'linear-gradient(135deg, #e0f7fa 0%, #e3f2fd 100%)',
+  perplexityai: 'linear-gradient(135deg, #eceff1 0%, #cfd8dc 100%)',
+  databricks: 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
+  cohere: 'linear-gradient(135deg, #fbe9e7 0%, #ffccbc 100%)',
+  huggingface: 'linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%)',
+  stabilityai: 'linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%)',
+  mistralai: 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)',
+  midjourney: 'linear-gradient(135deg, #eceff1 0%, #cfd8dc 100%)',
+}
 
-  const serializedCompanies = serializePrismaRecord(companies) as any[]
-  const serializedSalaries = serializePrismaRecord(recentSalaries) as any[]
-  
-  const searchOptions = [
-    ...serializedCompanies.map(c => ({ type: 'company' as const, name: c.name, slug: c.slug })),
-    ...rolesData.map(r => ({ type: 'role' as const, name: r.role, slug: encodeURIComponent(r.role) }))
-  ]
-  const locations = locationsData.map(l => l.location)
+const DEFAULT_GRADIENTS = [
+  'linear-gradient(135deg, #e3f2fd 0%, #fce4ec 100%)',
+  'linear-gradient(135deg, #fff3e0 0%, #fffde7 100%)',
+  'linear-gradient(135deg, #f1f8e9 0%, #dcedc8 100%)',
+  'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
+  'linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%)',
+  'linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%)',
+]
+
+const FUNDING_STAGES = [
+  { label: 'Pre-Seed', icon: '🛡️' },
+  { label: 'Seed', icon: '🌱' },
+  { label: 'Series A', icon: '🚀' },
+  { label: 'Series B', icon: '📈' },
+  { label: 'Series C', icon: '💎' },
+  { label: 'Series D', icon: '🏆' },
+  { label: 'Series E+', icon: '⚡' },
+  { label: 'Post IPO', icon: '📊' },
+]
+
+export default async function HomePage() {
+  const companies = await prisma.company.findMany({
+    include: {
+      salaries: {
+        select: { total_compensation: true, level: true, currency: true },
+      },
+    },
+    orderBy: { name: 'asc' },
+  })
+
+  const serialized = serializePrismaRecord(companies) as any[]
+
+  const searchOptions = serialized.map(c => ({ name: c.name, slug: c.slug }))
+
+  // Split companies into groups
+  const aiCompanies = serialized.filter(c =>
+    ['nvidia', 'google'].includes(c.slug)
+  )
+  const indianCompanies = serialized.filter(c =>
+    ['tcs', 'infosys', 'wipro', 'meesho', 'zepto', 'razorpay', 'flipkart'].includes(c.slug)
+  )
+  const popularCompanies = serialized.filter(c =>
+    ['google', 'amazon', 'microsoft', 'meta', 'nvidia', 'flipkart', 'razorpay'].includes(c.slug)
+  )
 
   return (
     <div style={{ background: '#fff', minHeight: '100vh' }}>
-
       {/* ── Hero ────────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden" style={{ background: '#fff' }}>
-        {/* Background blob decorations */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full opacity-25"
-            style={{ background: 'radial-gradient(circle, #FFE4E6 0%, transparent 65%)' }} />
-          <div className="absolute -top-16 right-0 w-96 h-96 rounded-full opacity-20"
-            style={{ background: 'radial-gradient(circle, #DBEAFE 0%, transparent 65%)' }} />
-          <div className="absolute top-40 left-1/2 w-64 h-64 rounded-full opacity-10"
-            style={{ background: 'radial-gradient(circle, #F0FDF4 0%, transparent 65%)' }} />
+          <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full opacity-30"
+            style={{ background: 'radial-gradient(circle, #FFE4E6 0%, transparent 70%)' }} />
+          <div className="absolute -top-12 right-0 w-80 h-80 rounded-full opacity-20"
+            style={{ background: 'radial-gradient(circle, #DBEAFE 0%, transparent 70%)' }} />
         </div>
 
-        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 pt-16 pb-14 text-center">
-          <h1
-            className="font-bold mb-4"
-            style={{ fontSize: 'clamp(32px, 5vw, 56px)', color: '#222222', lineHeight: '1.15' }}
-          >
-            Make career decisions<br />
-            <span style={{ color: '#FF5A5F' }}>with real data</span>
-          </h1>
+        <div className="relative max-w-3xl mx-auto px-4 sm:px-6 pt-14 pb-12 text-center">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest mb-5"
+            style={{ background: '#FFF0F0', color: '#FF5A5F', letterSpacing: '0.12em' }}>
+            Companies
+          </div>
 
-          <p className="max-w-xl mx-auto mb-8 text-base" style={{ color: '#717171', lineHeight: '1.7' }}>
-            Structured salary data for Indian tech professionals. Filter by level, company, and location. Compare offers side-by-side.
+          <h1 className="text-4xl sm:text-5xl font-bold mb-3" style={{ color: '#222222', lineHeight: '1.15' }}>
+            Search for <span style={{ color: '#FF5A5F' }}>Company</span>
+          </h1>
+          <p className="text-base mb-8" style={{ color: '#717171' }}>
+            Search companies to explore salaries, benefits, and more.
           </p>
 
-          {/* Hero Search */}
-          <div className="flex flex-col items-center justify-center w-full mb-12">
-            <HeroSearch options={searchOptions} locations={locations} />
-            
-            {/* Trending Searches */}
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3 w-full">
-              <span className="text-sm font-medium mr-2" style={{ color: '#717171' }}>Trending searches:</span>
-              {['Software Engineer', 'Data Scientist', 'Product Manager', 'Marketing Manager', 'Remote Jobs'].map(tag => (
-                <Link key={tag} href={`/salaries?q=${encodeURIComponent(tag)}`} 
-                  className="px-4 py-1.5 rounded-full text-xs font-medium transition-colors hover:bg-gray-100"
-                  style={{ background: '#FFF0F0', color: '#FF5A5F', border: '1px solid #FFE4E6' }}>
-                  {tag}
-                </Link>
-              ))}
-            </div>
-            
-            {/* Trust Badges */}
-            <div className="mt-12 w-full max-w-4xl grid grid-cols-2 md:grid-cols-4 gap-6 pt-8 border-t border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="text-2xl" style={{ color: '#222' }}>🛡️</div>
-                <div>
-                  <div className="text-sm font-bold" style={{ color: '#222' }}>Verified & Trusted</div>
-                  <div className="text-[11px]" style={{ color: '#717171' }}>Real data. Real people.</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="text-2xl" style={{ color: '#222' }}>👥</div>
-                <div>
-                  <div className="text-sm font-bold" style={{ color: '#222' }}>10M+ Users</div>
-                  <div className="text-[11px]" style={{ color: '#717171' }}>Across the globe</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="text-2xl" style={{ color: '#222' }}>🏢</div>
-                <div>
-                  <div className="text-sm font-bold" style={{ color: '#222' }}>500K+ Companies</div>
-                  <div className="text-[11px]" style={{ color: '#717171' }}>Researched & reviewed</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="text-2xl" style={{ color: '#222' }}>🔒</div>
-                <div>
-                  <div className="text-sm font-bold" style={{ color: '#222' }}>100% Free</div>
-                  <div className="text-[11px]" style={{ color: '#717171' }}>No hidden charges</div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <CompanyHeroSearch companies={searchOptions} />
         </div>
       </section>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
 
-        {/* ── Popular Companies ─────────────────────────────────────────────── */}
-        <section className="py-10 border-t" style={{ borderColor: '#F3F4F6' }}>
+        {/* ── Popular Companies ──────────────────────────────────────────────── */}
+        <section className="py-10">
           <div className="flex items-center justify-between mb-6">
-            <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#222222', margin: 0 }}>Trending Companies</h2>
-            <Link href="/companies" className="text-sm font-medium" style={{ color: '#FF5A5F' }}>
-              View all →
+            <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#222222', margin: 0 }}>Popular Companies</h2>
+            <Link href="/companies" className="flex items-center gap-1 text-sm font-medium" style={{ color: '#FF5A5F' }}>
+              View all companies <span>→</span>
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {serializedCompanies.slice(0, 12).map((company: any, i: number) => {
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {popularCompanies.map((company: any, i: number) => {
               const domain = LOGO_DOMAINS[company.slug] ?? `${company.slug}.com`
-              const tcValues = company.salaries.map((s: any) => s.total_compensation)
-              const median = computeMedian(tcValues)
-              const primaryCurrency = company.salaries[0]?.currency ?? 'INR'
-              const tints = ['#EFF6FF', '#FFFBEB', '#F0FFF4', '#FFF5F5', '#F5F3FF', '#ECFDF5']
-              const tint = tints[i % tints.length]
-
+              const gradient = COMPANY_GRADIENTS[company.slug] || DEFAULT_GRADIENTS[i % DEFAULT_GRADIENTS.length]
               return (
                 <Link
                   key={company.slug}
                   href={`/companies/${company.slug}`}
-                  id={`company-card-${company.slug}`}
-                  className="p-4 rounded-xl border transition-all duration-200 hover:shadow-md flex flex-col items-center text-center"
-                  style={{ background: tint, borderColor: 'transparent', textDecoration: 'none' }}
+                  className="flex items-center justify-between px-4 py-3 rounded-xl border transition-all duration-200 hover:shadow-md"
+                  style={{ background: gradient, borderColor: 'rgba(0,0,0,0.03)', textDecoration: 'none' }}
                 >
-                  <div className="relative w-12 h-12 mb-3">
-                    <div className="absolute inset-0 rounded-xl flex items-center justify-center text-white font-bold text-sm"
-                      style={{ background: '#FF5A5F' }}>
-                      {company.name.slice(0, 2).toUpperCase()}
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="relative w-8 h-8 flex-shrink-0">
+                      <div className="absolute inset-0 rounded-lg flex items-center justify-center text-white text-xs font-bold"
+                        style={{ background: '#FF5A5F' }}>
+                        {company.name.slice(0, 1)}
+                      </div>
+                      <img
+                        src={`https://logo.clearbit.com/${domain}`}
+                        alt={company.name}
+                        className="absolute inset-0 w-8 h-8 rounded-lg object-contain bg-white shadow-sm"
+                        style={{ padding: '2px' }}
+                      />
                     </div>
-                    <img
-                      src={`https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domain}&size=128`}
-                      alt={company.name}
-                      className="absolute inset-0 w-12 h-12 rounded-xl object-contain bg-white"
-                      style={{ padding: '3px', border: '1px solid rgba(0,0,0,0.06)' }}
-                    />
+                    <span className="text-sm font-medium truncate" style={{ color: '#222222' }}>{company.name}</span>
                   </div>
-                  <div className="text-xs font-semibold truncate w-full" style={{ color: '#222222' }}>{company.name}</div>
-                  {median > 0 && (
-                    <div className="text-xs mt-1 font-medium" style={{ color: '#0369A1' }}>
-                      {formatCurrency(median, primaryCurrency)}
-                    </div>
-                  )}
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ml-2"
+                    style={{ background: 'rgba(255,255,255,0.8)', border: '1px solid rgba(0,0,0,0.08)' }}>
+                    <span style={{ fontSize: '11px', color: '#484848' }}>→</span>
+                  </div>
                 </Link>
               )
             })}
           </div>
         </section>
 
-        {/* ── Highest Paying Roles ──────────────────────────────────────────── */}
-        <section className="py-10 border-t" style={{ borderColor: '#F3F4F6' }}>
-          <div className="flex items-center justify-between mb-6">
-            <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#222222', margin: 0 }}>Highest Paying Roles</h2>
-            <Link href="/salaries" className="text-sm font-medium" style={{ color: '#FF5A5F' }}>
-              View all →
-            </Link>
-          </div>
-
-          <div className="space-y-2">
-            {serializedSalaries.map((s: any, i: number) => (
-              <div
-                key={s.id}
-                className="flex items-center justify-between px-4 py-3.5 rounded-xl border transition-all hover:shadow-sm hover:bg-gray-50"
-                style={{ background: '#fff', borderColor: '#E5E7EB' }}
+        {/* ── Startups by Funding Stage ─────────────────────────────────────── */}
+        <section className="py-8 border-t" style={{ borderColor: '#F3F4F6' }}>
+          <h2 className="mb-5" style={{ fontSize: '18px', fontWeight: 700, color: '#222222', margin: '0 0 20px 0' }}>
+            Startups by Funding Stage
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {FUNDING_STAGES.map(({ label, icon }) => (
+              <button
+                key={label}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all hover:shadow-sm hover:border-gray-300"
+                style={{ background: '#fff', borderColor: '#E5E7EB', color: '#484848' }}
               >
-                <div className="flex items-center gap-4">
-                  <span
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                    style={{
-                      background: i < 3 ? '#FF5A5F' : '#F3F4F6',
-                      color: i < 3 ? '#fff' : '#9CA3AF'
-                    }}
-                  >
-                    {i + 1}
-                  </span>
-                  <div>
-                    <div className="font-semibold text-sm" style={{ color: '#222222' }}>
-                      {s.company.name} · {s.role}
-                    </div>
-                    <div className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>
-                      {s.level.replace(/_/g, '-')} · {s.location}
-                    </div>
-                  </div>
-                </div>
-                <div className="font-bold text-sm" style={{ color: '#0369A1', whiteSpace: 'nowrap' }}>
-                  {formatCurrency(s.total_compensation, s.currency)}
-                </div>
-              </div>
+                <span>{icon}</span>
+                {label}
+              </button>
             ))}
           </div>
         </section>
 
-        {/* ── Compare Offers ────────────────────────────────────────────────── */}
+        {/* ── Top AI Companies ──────────────────────────────────────────────── */}
+        {aiCompanies.length > 0 && (
+          <section className="py-8 border-t" style={{ borderColor: '#F3F4F6' }}>
+            <h2 className="mb-5" style={{ fontSize: '18px', fontWeight: 700, color: '#222222', margin: '0 0 20px 0' }}>
+              Top AI Companies
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {aiCompanies.map((company: any, i: number) => {
+                const domain = LOGO_DOMAINS[company.slug] ?? `${company.slug}.com`
+                const gradient = COMPANY_GRADIENTS[company.slug] || DEFAULT_GRADIENTS[i % DEFAULT_GRADIENTS.length]
+                return (
+                  <Link
+                    key={company.slug}
+                    href={`/companies/${company.slug}`}
+                    className="flex items-center justify-between px-4 py-3 rounded-xl border transition-all duration-200 hover:shadow-md"
+                    style={{ background: gradient, borderColor: 'rgba(0,0,0,0.03)', textDecoration: 'none' }}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative w-8 h-8 flex-shrink-0">
+                        <div className="absolute inset-0 rounded-lg flex items-center justify-center text-white text-xs font-bold"
+                          style={{ background: '#FF5A5F' }}>
+                          {company.name.slice(0, 1)}
+                        </div>
+                        <img
+                          src={`https://logo.clearbit.com/${domain}`}
+                          alt={company.name}
+                          className="absolute inset-0 w-8 h-8 rounded-lg object-contain bg-white shadow-sm"
+                          style={{ padding: '2px' }}
+                        />
+                      </div>
+                      <span className="text-sm font-medium truncate" style={{ color: '#222222' }}>{company.name}</span>
+                    </div>
+                    <span style={{ fontSize: '13px', color: '#9CA3AF', flexShrink: 0 }}>→</span>
+                  </Link>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ── Top Indian Companies ──────────────────────────────────────────── */}
+        {indianCompanies.length > 0 && (
+          <section className="py-8 border-t" style={{ borderColor: '#F3F4F6' }}>
+            <h2 className="mb-5" style={{ fontSize: '18px', fontWeight: 700, color: '#222222', margin: '0 0 20px 0' }}>
+              Top Indian Companies
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {indianCompanies.map((company: any, i: number) => {
+                const domain = LOGO_DOMAINS[company.slug] ?? `${company.slug}.com`
+                const gradient = COMPANY_GRADIENTS[company.slug] || DEFAULT_GRADIENTS[(i + 2) % DEFAULT_GRADIENTS.length]
+                return (
+                  <Link
+                    key={company.slug}
+                    href={`/companies/${company.slug}`}
+                    className="flex items-center justify-between px-4 py-3 rounded-xl border transition-all duration-200 hover:shadow-md"
+                    style={{ background: gradient, borderColor: 'rgba(0,0,0,0.03)', textDecoration: 'none' }}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative w-8 h-8 flex-shrink-0">
+                        <div className="absolute inset-0 rounded-lg flex items-center justify-center text-white text-xs font-bold"
+                          style={{ background: '#FF5A5F' }}>
+                          {company.name.slice(0, 1)}
+                        </div>
+                        <img
+                          src={`https://logo.clearbit.com/${domain}`}
+                          alt={company.name}
+                          className="absolute inset-0 w-8 h-8 rounded-lg object-contain bg-white shadow-sm"
+                          style={{ padding: '2px' }}
+                        />
+                      </div>
+                      <span className="text-sm font-medium truncate" style={{ color: '#222222' }}>{company.name}</span>
+                    </div>
+                    <span style={{ fontSize: '13px', color: '#9CA3AF', flexShrink: 0 }}>→</span>
+                  </Link>
+                )
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ── Compare Companies ─────────────────────────────────────────────── */}
         <section className="py-10 border-t" style={{ borderColor: '#F3F4F6' }}>
           <div className="text-center mb-8">
-            <h2 style={{ fontSize: '26px', fontWeight: 700, color: '#222222', margin: '0 0 8px' }}>
-              Compare offers. Make <span style={{ color: '#FF5A5F' }}>smarter</span> decisions.
+            <h2 style={{ fontSize: '28px', fontWeight: 700, color: '#222222', margin: '0 0 8px' }}>
+              Compare companies. Make <span style={{ color: '#FF5A5F' }}>better</span> career moves.
             </h2>
             <p className="text-sm" style={{ color: '#717171' }}>
-              Compare any two salary records side-by-side with exact delta calculations.
+              Compare salaries, benefits, culture, growth and more to find the right workplace for you.
             </p>
           </div>
 
-          <div className="flex items-center justify-center gap-5 mb-8">
+          <div className="flex items-center justify-center gap-4 mb-10">
             <Link href="/compare"
-              className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all hover:shadow-md"
+              className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-light transition-all hover:shadow-md"
               style={{ background: '#FFF0F0', border: '2px dashed #FFB3B5' }}>
               <span style={{ color: '#FF5A5F', fontSize: '28px', lineHeight: 1 }}>+</span>
             </Link>
             <span className="text-sm font-medium" style={{ color: '#9CA3AF' }}>vs</span>
             <Link href="/compare"
-              className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all hover:shadow-md"
+              className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-light transition-all hover:shadow-md"
               style={{ background: '#F0F0FF', border: '2px dashed #C4B5FD' }}>
               <span style={{ color: '#7C3AED', fontSize: '28px', lineHeight: 1 }}>+</span>
             </Link>
           </div>
 
-          <div className="text-center">
-            <Link href="/compare" className="btn-ghost text-sm px-6 py-2.5 rounded-xl">
-              Start comparing →
+          <div className="flex items-center justify-between mb-5">
+            <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#222222', margin: 0 }}>Popular comparisons</h3>
+            <Link href="/compare" className="text-sm font-medium" style={{ color: '#FF5A5F' }}>
+              View all comparisons →
             </Link>
           </div>
-        </section>
 
-        {/* ── Platform Areas ────────────────────────────────────────────────── */}
-        <section className="py-10 border-t" style={{ borderColor: '#F3F4F6' }}>
-          <h2 className="text-center mb-2" style={{ fontSize: '22px', fontWeight: 700, color: '#222222' }}>
-            Everything you need to make the right career move
-          </h2>
-          <p className="text-center text-sm mb-8" style={{ color: '#717171' }}>
-            Structured data across key product areas, all connected.
-          </p>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { icon: '💰', title: 'Salaries', desc: 'Level-aware compensation data by company, role, and location.', href: '/salaries' },
-              { icon: '🏢', title: 'Companies', desc: 'Research employers: ratings, salary ranges, and headcount.', href: '/companies' },
-              { icon: '⚖️', title: 'Compare', desc: 'Side-by-side salary comparison with delta calculations.', href: '/compare' },
-              { icon: '🛠️', title: 'Tools', desc: 'Tax calculator, hike calculator, and more career tools.', href: '/tools' },
-            ].map(({ icon, title, desc, href }) => (
+              { a: 'google', b: 'meta', aName: 'Google', bName: 'Meta', tag: 'Compensation & Benefits' },
+              { a: 'amazon', b: 'microsoft', aName: 'Amazon', bName: 'Microsoft', tag: 'Career Growth' },
+              { a: 'nvidia', b: 'google', aName: 'NVIDIA', bName: 'Google', tag: 'Culture & Work-Life' },
+              { a: 'tcs', b: 'infosys', aName: 'TCS', bName: 'Infosys', tag: 'Salaries & Benefits' },
+            ].map(({ a, b, aName, bName, tag }) => (
               <Link
-                key={title}
-                href={href}
-                className="p-6 rounded-xl border transition-all duration-200 hover:shadow-md"
-                style={{ background: '#fff', borderColor: '#E5E7EB', textDecoration: 'none' }}
+                key={`${a}-${b}`}
+                href={`/compare`}
+                className="p-4 rounded-xl border transition-all hover:shadow-md"
+                style={{ background: '#FAFAFA', borderColor: '#E5E7EB', textDecoration: 'none' }}
               >
-                <div className="text-3xl mb-4">{icon}</div>
-                <h3 style={{ fontSize: '15px', fontWeight: 600, margin: '0 0 6px', color: '#222222' }}>{title}</h3>
-                <p style={{ fontSize: '13px', color: '#9CA3AF', margin: 0, lineHeight: '1.5' }}>{desc}</p>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="relative w-9 h-9 flex-shrink-0">
+                    <div className="absolute inset-0 rounded-xl flex items-center justify-center text-white text-xs font-bold" style={{ background: '#FF5A5F' }}>
+                      {aName[0]}
+                    </div>
+                    <img src={`https://logo.clearbit.com/${LOGO_DOMAINS[a] ?? `${a}.com`}`} alt={aName}
+                      className="absolute inset-0 w-9 h-9 rounded-xl object-contain bg-white" style={{ padding: '2px' }} />
+                  </div>
+                  <span className="text-xs font-medium" style={{ color: '#9CA3AF' }}>vs</span>
+                  <div className="relative w-9 h-9 flex-shrink-0">
+                    <div className="absolute inset-0 rounded-xl flex items-center justify-center text-white text-xs font-bold" style={{ background: '#6366F1' }}>
+                      {bName[0]}
+                    </div>
+                    <img src={`https://logo.clearbit.com/${LOGO_DOMAINS[b] ?? `${b}.com`}`} alt={bName}
+                      className="absolute inset-0 w-9 h-9 rounded-xl object-contain bg-white" style={{ padding: '2px' }} />
+                  </div>
+                </div>
+                <div className="font-semibold text-sm" style={{ color: '#222222' }}>{aName} vs {bName}</div>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-xs" style={{ color: '#9CA3AF' }}>{tag}</span>
+                  <span style={{ color: '#9CA3AF', fontSize: '14px' }}>→</span>
+                </div>
               </Link>
             ))}
           </div>
         </section>
-
       </div>
     </div>
   )
