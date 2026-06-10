@@ -88,14 +88,9 @@ export default async function HomePage() {
             Structured salary data for Indian tech professionals. Filter by level, company, and location. Compare offers side-by-side.
           </p>
 
-          {/* Hero Search & CTAs */}
+          {/* Hero Search */}
           <div className="flex flex-col items-center justify-center w-full mb-12">
             <HeroSearch options={searchOptions} />
-            <div className="mt-2">
-              <Link href="#" className="text-sm font-semibold underline decoration-2 underline-offset-4 transition-colors hover:text-gray-900" style={{ color: '#FF5A5F' }}>
-                Add your salary anonymously →
-              </Link>
-            </div>
           </div>
 
           {/* Stats */}

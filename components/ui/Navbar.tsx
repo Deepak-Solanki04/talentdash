@@ -54,15 +54,6 @@ export default function Navbar() {
 
         {/* Right: Search + Sign in */}
         <div className="flex items-center gap-3 flex-shrink-0">
-          {/* Search */}
-          <div className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-full border cursor-pointer hover:shadow-sm transition-shadow"
-            style={{ borderColor: '#EBEBEB', background: '#fff', minWidth: '220px' }}>
-            <svg width="14" height="14" fill="none" stroke="#717171" strokeWidth="2" viewBox="0 0 24 24">
-              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-            </svg>
-            <span style={{ fontSize: '13px', color: '#717171' }}>Search companies, roles, locations...</span>
-          </div>
-
           {/* Sign in */}
           <button
             className="text-sm font-medium px-4 py-2 rounded-lg border transition-colors hover:bg-gray-50"
