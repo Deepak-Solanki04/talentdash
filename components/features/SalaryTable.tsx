@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import type { Level, Currency, SalaryWithCompany } from '@/types/salary'
 import { VALID_LEVELS, LEVEL_LABELS } from '@/lib/config'
-import { formatCurrency, formatExperience, formatLevel } from '@/lib/format'
+import { formatCurrency, formatExperience } from '@/lib/format'
 import LevelBadge from '@/components/ui/LevelBadge'
 
 interface SalaryTableProps {
@@ -140,33 +140,36 @@ export default function SalaryTable({ initialData }: SalaryTableProps) {
 
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return <span className="ml-1 opacity-30">↕</span>
-    return <span className="ml-1" style={{ color: '#FF5A5F' }}>{sortDir === 'desc' ? '↓' : '↑'}</span>
+    return <span className="ml-1 text-[#FF5A5F]">{sortDir === 'desc' ? '↓' : '↑'}</span>
   }
 
   return (
     <div className="animate-fadein">
       {/* ── Filter Bar ─────────────────────────────────────────────────────── */}
-      <div className="card p-4 mb-4">
-        <div className="flex flex-wrap gap-3 items-start">
+      <div className="bg-white border border-[#EBEBEB] rounded-xl p-5 mb-6 shadow-sm">
+        <div className="flex flex-wrap gap-4 items-end">
           {/* Company search (debounced) */}
-          <div className="flex-1 min-w-[180px] max-w-[240px]">
-            <label className="label-sm block mb-1.5">Company</label>
-            <input
-              id="filter-company"
-              type="text"
-              className="td-input"
-              placeholder="Search company..."
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-            />
+          <div className="flex-1 min-w-[200px] max-w-[280px]">
+            <label className="block text-xs font-semibold text-[#717171] uppercase tracking-wider mb-2">Company</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+              <input
+                id="filter-company"
+                type="text"
+                className="w-full pl-9 pr-3 py-2.5 text-sm font-medium text-[#222222] bg-[#FAFAFA] border border-[#EBEBEB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]/20 focus:border-[#FF5A5F] transition-all"
+                placeholder="Search company..."
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+              />
+            </div>
           </div>
 
           {/* Role dropdown */}
-          <div className="flex-1 min-w-[160px] max-w-[200px]">
-            <label className="label-sm block mb-1.5">Role</label>
+          <div className="flex-1 min-w-[160px] max-w-[220px]">
+            <label className="block text-xs font-semibold text-[#717171] uppercase tracking-wider mb-2">Role</label>
             <select
               id="filter-role"
-              className="td-select"
+              className="w-full px-3 py-2.5 text-sm font-medium text-[#222222] bg-[#FAFAFA] border border-[#EBEBEB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]/20 focus:border-[#FF5A5F] transition-all appearance-none cursor-pointer"
               value={role}
               onChange={(e) => { setRole(e.target.value); setPage(1) }}
             >
@@ -178,11 +181,11 @@ export default function SalaryTable({ initialData }: SalaryTableProps) {
           </div>
 
           {/* Location dropdown */}
-          <div className="flex-1 min-w-[150px] max-w-[190px]">
-            <label className="label-sm block mb-1.5">Location</label>
+          <div className="flex-1 min-w-[150px] max-w-[200px]">
+            <label className="block text-xs font-semibold text-[#717171] uppercase tracking-wider mb-2">Location</label>
             <select
               id="filter-location"
-              className="td-select"
+              className="w-full px-3 py-2.5 text-sm font-medium text-[#222222] bg-[#FAFAFA] border border-[#EBEBEB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF5A5F]/20 focus:border-[#FF5A5F] transition-all appearance-none cursor-pointer"
               value={location}
               onChange={(e) => { setLocation(e.target.value); setPage(1) }}
             >
@@ -195,18 +198,18 @@ export default function SalaryTable({ initialData }: SalaryTableProps) {
 
           {/* Currency toggle */}
           <div className="min-w-[120px]">
-            <label className="label-sm block mb-1.5">Currency</label>
-            <div className="flex rounded-lg border overflow-hidden" style={{ borderColor: '#EBEBEB' }}>
+            <label className="block text-xs font-semibold text-[#717171] uppercase tracking-wider mb-2">Currency</label>
+            <div className="flex bg-[#FAFAFA] border border-[#EBEBEB] rounded-lg p-1">
               {(['INR', 'USD'] as const).map((c) => (
                 <button
                   key={c}
                   id={`currency-${c.toLowerCase()}`}
                   onClick={() => setCurrency(c)}
-                  className="flex-1 px-3 py-2 text-sm font-medium transition-all duration-150"
-                  style={{
-                    background: currency === c ? '#FF5A5F' : '#fff',
-                    color: currency === c ? '#fff' : '#484848',
-                  }}
+                  className={`flex-1 px-3 py-1.5 text-xs font-bold rounded-md transition-all duration-150 ${
+                    currency === c 
+                      ? 'bg-white text-[#222222] shadow-sm ring-1 ring-gray-900/5' 
+                      : 'text-[#717171] hover:text-[#222222]'
+                  }`}
                 >
                   {c === 'INR' ? '₹ INR' : '$ USD'}
                 </button>
@@ -216,120 +219,128 @@ export default function SalaryTable({ initialData }: SalaryTableProps) {
         </div>
 
         {/* Level multi-select */}
-        <div className="mt-3">
-          <label className="label-sm block mb-2">Level</label>
-          <div className="flex flex-wrap gap-1.5">
-            {VALID_LEVELS.map((level) => (
-              <button
-                key={level}
-                id={`level-filter-${level}`}
-                onClick={() => toggleLevel(level as Level)}
-                className="badge transition-all duration-150 cursor-pointer"
-                style={{
-                  background: selectedLevels.includes(level as Level) ? '#FF5A5F' : '#f5f5f5',
-                  color: selectedLevels.includes(level as Level) ? '#fff' : '#484848',
-                  borderColor: selectedLevels.includes(level as Level) ? '#FF5A5F' : '#EBEBEB',
-                }}
-              >
-                {LEVEL_LABELS[level as Level]}
-              </button>
-            ))}
+        <div className="mt-5 pt-4 border-t border-[#EBEBEB]">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-semibold text-[#717171] uppercase tracking-wider">Levels</label>
             {(selectedLevels.length > 0 || company || role || location) && (
               <button
                 id="clear-all-filters"
                 onClick={clearAll}
-                className="text-xs font-medium ml-2 transition-colors duration-150"
-                style={{ color: '#FF5A5F' }}
+                className="text-xs font-bold text-[#FF5A5F] hover:text-[#e0484d] transition-colors"
               >
-                Clear all
+                Clear filters
               </button>
             )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {VALID_LEVELS.map((level) => {
+              const isSelected = selectedLevels.includes(level as Level)
+              return (
+                <button
+                  key={level}
+                  id={`level-filter-${level}`}
+                  onClick={() => toggleLevel(level as Level)}
+                  className={`px-3 py-1.5 text-[13px] font-semibold rounded-full border transition-all duration-150 ${
+                    isSelected 
+                      ? 'bg-[#FF5A5F] text-white border-[#FF5A5F] shadow-sm' 
+                      : 'bg-white text-[#484848] border-[#EBEBEB] hover:border-[#D1D5DB] hover:bg-[#FAFAFA]'
+                  }`}
+                >
+                  {LEVEL_LABELS[level as Level]}
+                </button>
+              )
+            })}
           </div>
         </div>
       </div>
 
       {/* ── Results Summary ───────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-3 px-1">
-        <p className="meta-text">
+      <div className="flex items-center justify-between mb-4 px-1">
+        <h2 className="text-xl font-bold text-[#222222]">
+          Salary Data
+        </h2>
+        <span className="text-sm font-medium text-[#717171] bg-white border border-[#EBEBEB] px-3 py-1 rounded-md shadow-sm">
           {total === 0
-            ? 'No records found'
-            : `Showing ${start + 1}–${end} of ${total} records`}
-        </p>
+            ? '0 records'
+            : `Showing ${start + 1}–${end} of ${total}`}
+        </span>
       </div>
 
       {/* ── Table ────────────────────────────────────────────────────────── */}
       {total === 0 ? (
         // Empty state
-        <div className="card p-12 text-center">
-          <div className="text-4xl mb-3">🔍</div>
-          <h3 className="text-base font-semibold mb-2" style={{ color: '#222222' }}>
-            No records found for these filters
+        <div className="bg-white border border-[#EBEBEB] rounded-xl p-16 text-center shadow-sm">
+          <div className="text-5xl mb-4">🔍</div>
+          <h3 className="text-lg font-bold text-[#222222] mb-2">
+            No salary records found
           </h3>
-          <p className="meta-text mb-4">Try removing a filter to see more results.</p>
+          <p className="text-sm text-[#717171] mb-6">Try adjusting your filters or search terms.</p>
           <button
             id="empty-state-clear-all"
             onClick={clearAll}
-            className="btn-primary text-sm"
+            className="px-6 py-2.5 bg-[#FF5A5F] hover:bg-[#e0484d] text-white font-semibold rounded-lg shadow-sm transition-colors text-sm"
           >
             Clear all filters
           </button>
         </div>
       ) : (
-        <div className="card overflow-x-auto">
-          <table className="td-table">
-            <thead>
-              <tr>
-                <th>Company</th>
-                <th>Role</th>
-                <th>Level</th>
-                <th>Location</th>
-                <th
-                  id="sort-experience"
-                  className="cursor-pointer select-none hover:text-gray-700"
-                  onClick={() => handleSort('experience_years')}
-                >
-                  Experience <SortIcon field="experience_years" />
-                </th>
-                <th
-                  id="sort-base"
-                  className="cursor-pointer select-none hover:text-gray-700"
-                  onClick={() => handleSort('base_salary')}
-                >
-                  Base Salary <SortIcon field="base_salary" />
-                </th>
-                <th>Stock</th>
-                <th
-                  id="sort-tc"
-                  className="cursor-pointer select-none hover:text-gray-700"
-                  onClick={() => handleSort('total_compensation')}
-                >
-                  Total Comp <SortIcon field="total_compensation" />
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageData.map((salary) => (
-                <SalaryRow key={salary.id} salary={salary} displayCurrency={currency} />
-              ))}
-            </tbody>
-          </table>
+        <div className="bg-white border border-[#EBEBEB] rounded-xl overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse whitespace-nowrap">
+              <thead>
+                <tr className="bg-[#FAFAFA] border-b border-[#EBEBEB]">
+                  <th className="px-6 py-4 text-[11px] font-bold text-[#717171] uppercase tracking-wider">Company</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-[#717171] uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-[#717171] uppercase tracking-wider">Level</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-[#717171] uppercase tracking-wider">Location</th>
+                  <th
+                    id="sort-experience"
+                    className="px-6 py-4 text-[11px] font-bold text-[#717171] uppercase tracking-wider cursor-pointer select-none hover:text-[#222222] hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('experience_years')}
+                  >
+                    <div className="flex items-center">Experience <SortIcon field="experience_years" /></div>
+                  </th>
+                  <th
+                    id="sort-base"
+                    className="px-6 py-4 text-[11px] font-bold text-[#717171] uppercase tracking-wider cursor-pointer select-none hover:text-[#222222] hover:bg-gray-100 transition-colors"
+                    onClick={() => handleSort('base_salary')}
+                  >
+                    <div className="flex items-center">Base Salary <SortIcon field="base_salary" /></div>
+                  </th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-[#717171] uppercase tracking-wider">Stock</th>
+                  <th
+                    id="sort-tc"
+                    className="px-6 py-4 text-[11px] font-bold text-[#222222] uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100 transition-colors border-l border-[#F0F0F0] bg-[#FDFDFD]"
+                    onClick={() => handleSort('total_compensation')}
+                  >
+                    <div className="flex items-center text-[#0369A1]">Total Comp <SortIcon field="total_compensation" /></div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#EBEBEB]">
+                {pageData.map((salary) => (
+                  <SalaryRow key={salary.id} salary={salary} displayCurrency={currency} />
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {/* ── Pagination ────────────────────────────────────────────────────── */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4 px-1">
+        <div className="flex items-center justify-between mt-6 px-1">
           <button
             id="pagination-prev"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
-            className="btn-ghost text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-semibold text-[#484848] bg-white border border-[#EBEBEB] rounded-lg hover:bg-[#FAFAFA] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
           >
             ← Previous
           </button>
-          <div className="flex items-center gap-2">
+          
+          <div className="hidden sm:flex items-center gap-1.5">
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              // Show pages around current
               let pageNum: number
               if (totalPages <= 5) pageNum = i + 1
               else if (currentPage <= 3) pageNum = i + 1
@@ -340,22 +351,23 @@ export default function SalaryTable({ initialData }: SalaryTableProps) {
                 <button
                   key={pageNum}
                   onClick={() => setPage(pageNum)}
-                  className="w-8 h-8 rounded-lg text-sm font-medium transition-all duration-150"
-                  style={{
-                    background: currentPage === pageNum ? '#FF5A5F' : 'transparent',
-                    color: currentPage === pageNum ? '#fff' : '#484848',
-                  }}
+                  className={`w-9 h-9 rounded-lg text-sm font-bold transition-all duration-150 ${
+                    currentPage === pageNum
+                      ? 'bg-[#FF5A5F] text-white shadow-sm'
+                      : 'bg-white text-[#484848] border border-[#EBEBEB] hover:bg-[#FAFAFA] hover:border-[#D1D5DB]'
+                  }`}
                 >
                   {pageNum}
                 </button>
               )
             })}
           </div>
+
           <button
             id="pagination-next"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
-            className="btn-ghost text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-semibold text-[#484848] bg-white border border-[#EBEBEB] rounded-lg hover:bg-[#FAFAFA] disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
           >
             Next →
           </button>
@@ -381,27 +393,27 @@ function SalaryRow({
   const hasStock = stock > 0
 
   return (
-    <tr>
+    <tr className="hover:bg-[#F9FAFB] transition-colors group">
       {/* Company */}
-      <td>
-        <a
-          href={`/companies/${company.slug}`}
-          className="font-semibold text-sm hover:underline truncate block max-w-[160px]"
-          style={{ color: '#222222' }}
-          title={company.name}
-        >
-          {company.name}
-        </a>
-        {company.industry && (
-          <span className="meta-text block">{company.industry}</span>
-        )}
+      <td className="px-6 py-4">
+        <div className="flex flex-col">
+          <a
+            href={`/companies/${company.slug}`}
+            className="text-[14px] font-bold text-[#222222] hover:text-[#FF5A5F] hover:underline truncate max-w-[160px] transition-colors"
+            title={company.name}
+          >
+            {company.name}
+          </a>
+          {company.industry && (
+            <span className="text-[12px] font-medium text-[#717171] mt-0.5 truncate max-w-[160px]">{company.industry}</span>
+          )}
+        </div>
       </td>
 
       {/* Role */}
-      <td>
+      <td className="px-6 py-4">
         <span
-          className="text-sm block max-w-[180px] truncate"
-          style={{ color: '#484848' }}
+          className="text-[14px] font-semibold text-[#484848] block max-w-[180px] truncate"
           title={role}
         >
           {role}
@@ -409,47 +421,48 @@ function SalaryRow({
       </td>
 
       {/* Level badge */}
-      <td>
+      <td className="px-6 py-4">
         <LevelBadge level={level as Level} />
       </td>
 
       {/* Location */}
-      <td>
-        <span className="text-sm" style={{ color: '#484848' }}>
+      <td className="px-6 py-4">
+        <span className="text-[13px] font-medium text-[#484848]">
           {location}
         </span>
       </td>
 
       {/* Experience */}
-      <td>
-        <span className="text-sm" style={{ color: '#717171' }}>
+      <td className="px-6 py-4">
+        <span className="text-[13px] font-medium text-[#717171]">
           {formatExperience(experience_years)}
         </span>
       </td>
 
       {/* Base Salary */}
-      <td>
-        <span className="text-sm font-medium" style={{ color: '#484848' }}>
-          {fmt(base_salary)}
-        </span>
-        {!hasBonus && (
-          <span className="meta-text block">Bonus: —</span>
-        )}
-        {hasBonus && (
-          <span className="meta-text block">Bonus: {fmt(bonus)}</span>
-        )}
+      <td className="px-6 py-4">
+        <div className="flex flex-col">
+          <span className="text-[14px] font-semibold text-[#484848]">
+            {fmt(base_salary)}
+          </span>
+          <span className="text-[11px] font-medium text-[#9CA3AF] mt-0.5">
+            {hasBonus ? `Bonus: ${fmt(bonus)}` : 'Bonus: —'}
+          </span>
+        </div>
       </td>
 
       {/* Stock */}
-      <td>
-        <span className="text-sm" style={{ color: hasStock ? '#484848' : '#717171' }}>
+      <td className="px-6 py-4">
+        <span className={`text-[14px] font-semibold ${hasStock ? 'text-[#484848]' : 'text-[#9CA3AF]'}`}>
           {hasStock ? fmt(stock) : '—'}
         </span>
       </td>
 
       {/* Total Comp — dominant */}
-      <td>
-        <span className="tc-amount">{fmt(total_compensation)}</span>
+      <td className="px-6 py-4 border-l border-[#F0F0F0] bg-[#FDFDFD] group-hover:bg-white transition-colors">
+        <span className="text-[16px] font-black text-[#0369A1] tracking-tight block">
+          {fmt(total_compensation)}
+        </span>
       </td>
     </tr>
   )
