@@ -32,23 +32,25 @@ export default async function ComparePage() {
   const salaries = serializePrismaRecord(rawSalaries) as unknown as SalaryWithCompany[]
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-      <div className="mb-8">
-        <h1 className="mb-2">Compare Salary Records</h1>
-        <p style={{ color: '#484848' }}>
-          Select two salary records to compare compensation side-by-side.
-        </p>
-      </div>
-
-      {/* Client component — justified use of 'use client' for interactive selectors */}
-      <Suspense fallback={
-        <div className="card p-12 text-center animate-pulse">
-          <div className="text-4xl mb-3">⚖️</div>
-          <p className="meta-text">Select two salary records above to see a detailed comparison.</p>
+    <div className="bg-[#F7F7F7] min-h-screen py-10">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-black text-[#222222] tracking-tight mb-2">Compare Salary Records</h1>
+          <p className="text-[#484848] font-medium text-[15px]">
+            Select two salary records to compare compensation side-by-side.
+          </p>
         </div>
-      }>
-        <ComparePanel salaries={salaries} />
-      </Suspense>
+
+        {/* Client component — justified use of 'use client' for interactive selectors */}
+        <Suspense fallback={
+          <div className="bg-white border border-[#EBEBEB] rounded-xl p-12 text-center shadow-sm animate-pulse">
+            <div className="text-4xl mb-4">⚖️</div>
+            <p className="text-[#717171] font-medium text-sm">Loading comparison data...</p>
+          </div>
+        }>
+          <ComparePanel salaries={salaries} />
+        </Suspense>
+      </div>
     </div>
   )
 }
