@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { prisma } from '@/lib/db'
@@ -166,10 +167,11 @@ export default async function SalariesPage(props: { searchParams: Promise<{ [key
                     <div className="absolute inset-0 bg-[#FF5A5F] flex items-center justify-center text-white font-bold text-xs">
                       {slug.slice(0, 2).toUpperCase()}
                     </div>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={getLogoUrl(slug)}
                       alt={slug}
+                      width={48}
+                      height={48}
                       className="absolute inset-0 w-full h-full object-contain p-1.5 bg-white"
                     />
                   </div>

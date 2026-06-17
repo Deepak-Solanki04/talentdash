@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { prisma } from '@/lib/db'
@@ -145,10 +146,11 @@ export default async function CompanyPage({ params }: Props) {
                 <div className="absolute inset-0 bg-[#FF5A5F] flex items-center justify-center text-white font-bold text-2xl">
                   {initials}
                 </div>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={logoUrl}
                   alt={`${company.name} logo`}
+                  width={96}
+                  height={96}
                   className="absolute inset-0 w-full h-full object-contain p-3 bg-white"
                 />
               </div>
@@ -490,10 +492,11 @@ export default async function CompanyPage({ params }: Props) {
                           <div className="absolute inset-0 bg-[#FF5A5F] rounded-xl flex items-center justify-center text-white font-bold text-sm">
                             {co.name.slice(0, 2).toUpperCase()}
                           </div>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
+                          <Image
                             src={getLogoUrl(co.slug)}
                             alt={co.name}
+                            width={48}
+                            height={48}
                             className="absolute inset-0 w-full h-full object-contain p-1.5 bg-white rounded-xl border border-[#EBEBEB]"
                           />
                         </div>

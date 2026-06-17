@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
 import { prisma } from '@/lib/db'
 import { serializePrismaRecord, formatCurrency, computeMedian } from '@/lib/format'
@@ -151,9 +152,11 @@ export default async function CompaniesPage() {
                         style={{ background: '#FF5A5F' }}>
                         {company.name.slice(0, 1)}
                       </div>
-                      <img
+                      <Image
                         src={`https://logo.clearbit.com/${domain}`}
                         alt={company.name}
+                        width={32}
+                        height={32}
                         className="absolute inset-0 w-8 h-8 rounded-lg object-contain bg-white"
                         style={{ padding: '2px' }}
                       />
@@ -211,9 +214,11 @@ export default async function CompaniesPage() {
                           style={{ background: '#FF5A5F' }}>
                           {company.name.slice(0, 1)}
                         </div>
-                        <img
+                        <Image
                           src={`https://logo.clearbit.com/${domain}`}
                           alt={company.name}
+                          width={32}
+                          height={32}
                           className="absolute inset-0 w-8 h-8 rounded-lg object-contain bg-white"
                           style={{ padding: '2px' }}
                         />
@@ -250,9 +255,11 @@ export default async function CompaniesPage() {
                           style={{ background: '#FF5A5F' }}>
                           {company.name.slice(0, 1)}
                         </div>
-                        <img
+                        <Image
                           src={`https://logo.clearbit.com/${domain}`}
                           alt={company.name}
+                          width={32}
+                          height={32}
                           className="absolute inset-0 w-8 h-8 rounded-lg object-contain bg-white"
                           style={{ padding: '2px' }}
                         />
@@ -332,7 +339,7 @@ export default async function CompaniesPage() {
                     <div className="absolute inset-0 rounded-xl flex items-center justify-center text-white text-xs font-bold" style={{ background: '#FF5A5F' }}>
                       {aName[0]}
                     </div>
-                    <img src={`https://logo.clearbit.com/${LOGO_DOMAINS[a] ?? `${a}.com`}`} alt={aName}
+                    <Image src={`https://logo.clearbit.com/${LOGO_DOMAINS[a] ?? `${a}.com`}`} alt={aName} width={36} height={36}
                       className="absolute inset-0 w-9 h-9 rounded-xl object-contain bg-white" style={{ padding: '2px' }} />
                   </div>
                   <span className="text-xs font-medium" style={{ color: '#9CA3AF' }}>vs</span>
@@ -340,7 +347,7 @@ export default async function CompaniesPage() {
                     <div className="absolute inset-0 rounded-xl flex items-center justify-center text-white text-xs font-bold" style={{ background: '#6366F1' }}>
                       {bName[0]}
                     </div>
-                    <img src={`https://logo.clearbit.com/${LOGO_DOMAINS[b] ?? `${b}.com`}`} alt={bName}
+                    <Image src={`https://logo.clearbit.com/${LOGO_DOMAINS[b] ?? `${b}.com`}`} alt={bName} width={36} height={36}
                       className="absolute inset-0 w-9 h-9 rounded-xl object-contain bg-white" style={{ padding: '2px' }} />
                   </div>
                 </div>

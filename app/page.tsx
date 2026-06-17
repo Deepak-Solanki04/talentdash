@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
 import HeroSearch from '@/components/features/HeroSearch'
 import { prisma } from '@/lib/db'
@@ -155,7 +156,7 @@ export default async function HomePage() {
                 <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Top rated companies</div>
                 <div className="flex gap-3">
                   {['google.com', 'microsoft.com', 'apple.com', 'amazon.com'].map(d => (
-                    <img key={d} src={`https://logo.clearbit.com/${d}`} className="w-10 h-10 rounded-xl border p-1" alt="company" />
+                    <Image key={d} src={`https://logo.clearbit.com/${d}`} width={40} height={40} className="w-10 h-10 rounded-xl border p-1" alt="company" />
                   ))}
                   <div className="w-10 h-10 rounded-xl border flex items-center justify-center text-gray-400 text-xs bg-gray-50">+</div>
                 </div>
@@ -281,9 +282,9 @@ export default async function HomePage() {
             
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4 opacity-70 grayscale">
-                <img src="https://logo.clearbit.com/microsoft.com" className="h-6" alt="Microsoft" />
-                <img src="https://logo.clearbit.com/google.com" className="h-6" alt="Google" />
-                <img src="https://logo.clearbit.com/deloitte.com" className="h-6" alt="Deloitte" />
+                <Image src="https://logo.clearbit.com/microsoft.com" width={96} height={24} className="h-6 w-auto" alt="Microsoft" />
+                <Image src="https://logo.clearbit.com/google.com" width={96} height={24} className="h-6 w-auto" alt="Google" />
+                <Image src="https://logo.clearbit.com/deloitte.com" width={96} height={24} className="h-6 w-auto" alt="Deloitte" />
               </div>
               <Link href="/workplace" className="text-sm font-bold text-[#FF5A5F] hover:underline">Explore Workplace Index →</Link>
             </div>
